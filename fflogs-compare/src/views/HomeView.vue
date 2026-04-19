@@ -1,7 +1,9 @@
 <template>
   <div style="padding: 2rem">
-    <a-input-search v-model:value="code" placeholder="Paste report code e.g. abc123XYZ" enter-button="Fetch"
-      :loading="store.loading" @search="store.fetchReport(code)" />
+    <!-- <a-input-search v-model:value="code" placeholder="Paste report code e.g. abc123XYZ" enter-button="Fetch"
+      :loading="store.loading" @search="store.fetchReport(code)" /> -->
+    <player-picker></player-picker>
+
 
     <div v-if="store.quota" style="margin-top: 1rem">
       <a-progress :percent="quotaPercent" :status="quotaStatus"
@@ -10,6 +12,7 @@
         Resets in {{ resetMinutes }} min
       </span>
     </div>
+
 
     <a-alert v-if="store.error" type="error" :message="store.error" style="margin-top: 1rem" />
 
@@ -23,6 +26,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useFFLogsStore } from '@/stores/fflogsStore'
+import PlayerPicker from './playerPicker.vue'
 
 const store = useFFLogsStore()
 const code = ref('')

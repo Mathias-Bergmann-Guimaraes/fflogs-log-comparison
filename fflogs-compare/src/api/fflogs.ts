@@ -22,28 +22,3 @@ export async function query<T = unknown>(
 
   return json.data
 }
-
-// Query to fetch basic report info + fights, and current API quota usage
-export const REPORT_QUERY = `
-  query($code: String!) {
-    rateLimitData {
-      limitPerHour
-      pointsSpentThisHour
-      pointsResetIn
-    }
-    reportData {
-      report(code: $code) {
-        title
-        startTime
-        endTime
-        fights {
-          id
-          name
-          kill
-          difficulty
-          lastPhaseAsAbsoluteIndex
-        }
-      }
-    }
-  }
-`
