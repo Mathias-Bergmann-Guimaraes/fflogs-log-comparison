@@ -1,5 +1,7 @@
 import type { CodegenConfig } from '@graphql-codegen/cli'
 
+// codegen.ts runs in Node via jiti — process.env is populated by `--env-file=.env` in the npm script.
+// The token is fetched here at config-parse time so codegen can introspect the live FFLogs schema.
 async function getToken(): Promise<string> {
   const clientId = process.env.VITE_FFLOGS_CLIENT_ID
   const clientSecret = process.env.VITE_FFLOGS_CLIENT_SECRET
@@ -32,6 +34,7 @@ const config: CodegenConfig = {
       },
     },
   },
+  // Scans all .graphql files under src/ and generates types for each operation found
   documents: 'src/**/*.graphql',
   generates: {
     'src/api/__generated__/graphql.ts': {
@@ -39,6 +42,8 @@ const config: CodegenConfig = {
       config: {
         avoidOptionals: true,
         strictScalars: true,
+        // maybeValue: 'T' strips nullability from generated types — valid because the query
+        // layer already throws on errors, so null fields in a successful response won't occur
         maybeValue: 'T',
         scalars: {
           Float: 'number',

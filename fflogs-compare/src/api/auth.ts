@@ -1,3 +1,6 @@
+// Uses the OAuth 2.0 client credentials flow — no user login involved.
+// The token is short-lived and scoped to public data only.
+// Credentials come from VITE_FFLOGS_CLIENT_ID / VITE_FFLOGS_CLIENT_SECRET in .env.
 export async function getToken(): Promise<string> {
   const res = await fetch('https://www.fflogs.com/oauth/token', {
     method: 'POST',

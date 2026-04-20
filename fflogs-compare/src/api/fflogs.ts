@@ -1,3 +1,4 @@
+// FFLogs v2 uses GraphQL over a plain HTTP POST — no GraphQL client library needed.
 const API_URL = 'https://www.fflogs.com/api/v2/client'
 
 export async function query<TData, TVariables extends Record<string, unknown> = Record<string, unknown>>(
@@ -18,6 +19,7 @@ export async function query<TData, TVariables extends Record<string, unknown> = 
 
   const json = await res.json()
 
+  // GraphQL always returns HTTP 200 even on errors — actual errors are in the body
   if (json.errors) throw new Error(json.errors[0].message)
 
   return json.data

@@ -1,3 +1,7 @@
+// Each function here ties a raw .graphql query string to its codegen-generated types.
+// The ?raw Vite suffix imports the file as a plain string at build time — no GraphQL client needed.
+// To add a new query: create a .graphql file, run `npm run codegen`, then add a typed wrapper here.
+
 import { query } from '@/api/fflogs'
 import type {
   RateLimitDataQuery,
@@ -25,6 +29,7 @@ export function fetchReportPlayers(token: string, variables: ReportPlayersQueryV
   return query<ReportPlayersQuery, ReportPlayersQueryVariables>(token, reportPlayersGql, variables)
 }
 
+// fetchReportData returns paginated damage events — use fetchAllEvents in the store to collect all pages
 export function fetchReportData(token: string, variables: ReportDataQueryVariables) {
   return query<ReportDataQuery, ReportDataQueryVariables>(token, reportDataGql, variables)
 }
