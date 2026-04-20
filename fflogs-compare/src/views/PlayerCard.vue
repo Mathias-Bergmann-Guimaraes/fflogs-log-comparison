@@ -6,20 +6,21 @@
       </template>
     </a-card-meta>
     <div class="flex items-center justify-around w-full">
-      <span>rdps</span>
-      <span>adps</span>
-      <span>Crit%</span>
-      <span>DH%</span>
+      <span>rdps {{ playerSummaryData.rDPS }}</span>
+      <span>adps {{ playerSummaryData.aDPS }}</span>
+      <span>Crit% {{ playerSummaryData.crit }}</span>
+      <span>DH% {{ playerSummaryData.directHit }}</span>
     </div>
   </a-card>
 </template>
 
 <script setup lang="ts">
-import type { Actor } from '@/types/fflogs'
+import type { Actor, PlayerSummary } from '@/types/fflogs'
 import { computed, ref } from 'vue'
 
 const props = defineProps<{
   player: Actor
+  playerSummaryData: PlayerSummary
 }>()
 
 const playerName = ref<string>(props.player.name)

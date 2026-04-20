@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getToken } from '@/api/auth'
-import { fetchRateLimitData, fetchReportMeta, fetchReportPlayers, fetchReportFightEvents } from '@/api/useQuery'
-import type { Actor, ReportMeta, ReportPlayers, RateLimitData, ReportFightEvents } from '@/types/fflogs'
+import  *  as ql from '@/api/useQuery'
+import type { Actor, ReportMeta, ReportPlayers, RateLimitData, ReportFightEvents, ReportPlayerSummary, TableData, PlayerSummary, TableEntry } from '@/types/fflogs'
+import { toNum } from './fflogsUtils'
 
 export const useFFLogsStore = defineStore('fflogs', () => {
   // Cached OAuth token — fetched once on first API call, reused for all subsequent calls
@@ -12,6 +13,8 @@ export const useFFLogsStore = defineStore('fflogs', () => {
   const reports = ref<Record<string, ReportMeta>>({})
   const reportPlayers = ref<Record<string, ReportPlayers>>({})
   const fightEvents = ref<Record<string, ReportFightEvents>>({})
+  const playerSummary = ref<Record<string, ReportPlayerSummary>>({})
+  const playerSmallSummary = ref<Record<string, PlayerSummary>>({})
 
   // Players who participated in the selected fights, with LimitBreak filtered out
   const lastReportPlayers = ref<Actor[]>([])
@@ -29,6 +32,8 @@ export const useFFLogsStore = defineStore('fflogs', () => {
     }
   }
 
+  // MARK: Querries
+
   // FFLogs paginates events via nextPageTimestamp — this loops until all pages are collected.
   // startTime advances each iteration to the timestamp where the previous page ended.
   async function fetchAllEvents(code: string, fightIDs: number[] = [], startTime: number | undefined, endTime: number | undefined) {
@@ -39,15 +44,34 @@ export const useFFLogsStore = defineStore('fflogs', () => {
       return
     }
 
-    const data = await fetchReportFightEvents(token.value!, { code, fightIDs, startTime, endTime })
+    const data = await ql.fetchReportFightEvents(token.value!, { code, fightIDs, startTime, endTime })
     return data
   }
 
   /**
-   * Fetches event of a Single Player
+   * Fetches sumary data of a Single Player like rDPS, aDPS, nDPS, cDPS
    */
-  async function fetchPlayerEvent(playerID: number, code: string) {
+  async function fetchPlayerSumary(code: string, fightIDs: number[], playerID: number) {
+    if (!reports.value[code]){
+      fetchReport(code, fightIDs)
+    }
 
+    const fightStartTime = reports.value[code]?.fights[0]?.startTime
+    const fightEndTime = reports.value[code]?.fights[0]?.endTime
+
+    if (!fightEndTime || !fightStartTime){
+      return
+    }
+
+    const [rateLimitData, data] = await Promise.all([
+      ql.fetchRateLimitData(token.value!),
+      ql.fetchReportPlayerSummary(token.value!, { code, fightIDs, startTime: fightStartTime, endTime: fightEndTime, sourceID: playerID })
+    ])
+
+    quota.value = rateLimitData.rateLimitData
+    const tableData = (data.reportData.report.table as { data: TableData }).data
+    playerSummary.value[code] = tableData
+    return tableData
   }
 
   // Fetches title, startTime, endTime, and the full fights list for a report.
@@ -66,8 +90,8 @@ export const useFFLogsStore = defineStore('fflogs', () => {
       await ensureToken()
 
       const [rateLimitData, reportData] = await Promise.all([
-        fetchRateLimitData(token.value!),
-        fetchReportMeta(token.value!, { code, fightIDs}),
+        ql.fetchRateLimitData(token.value!),
+        ql.fetchReportMeta(token.value!, { code, fightIDs}),
       ])
 
       quota.value = rateLimitData.rateLimitData
@@ -92,8 +116,8 @@ export const useFFLogsStore = defineStore('fflogs', () => {
       await ensureToken()
 
       const [rateLimitData, playersData] = await Promise.all([
-        fetchRateLimitData(token.value!),
-        fetchReportPlayers(token.value!, { code, fightIDs }),
+        ql.fetchRateLimitData(token.value!),
+        ql.fetchReportPlayers(token.value!, { code, fightIDs }),
       ])
 
       quota.value = rateLimitData.rateLimitData
@@ -116,16 +140,74 @@ export const useFFLogsStore = defineStore('fflogs', () => {
     return actors.filter(a => activeIDs.has(a.id) && a.subType !== 'LimitBreak')
   }
 
+  function curatePlayerSummary(playerID:number, tableData: TableData | undefined){
+    if(!tableData){
+      error.value = 'no Table Data'
+      return
+    }
+    let totalDamage = 0
+    let aDPS = 0
+    let rDPS = 0
+    let nDPS = 0
+    let cDPS = 0
+    let crit = 0
+    let totalCrit = 0
+    let totalDH = 0
+    let totalHit = 0
+    let directHit = 0
+    let directCrit = 0
+    if(tableData.entries){
+      tableData.entries.forEach((entry) =>{
+        totalDamage += entry.total
+        rDPS += toNum(entry.totalRDPS)
+        aDPS += toNum(entry.totalRDPS)
+        nDPS += toNum(entry.totalRDPS)
+        cDPS += toNum(entry.totalRDPS)
+
+        crit += entry.critHitCount/entry.hitCount
+        totalCrit += entry.critHitCount
+        totalDH += entry.multistrikeHitCount
+        totalHit += entry.hitCount
+
+      })
+    }
+    aDPS = calcDPS(aDPS, tableData)
+    rDPS = calcDPS(rDPS, tableData)
+    nDPS = calcDPS(nDPS, tableData)
+    cDPS = calcDPS(cDPS, tableData)
+    crit = totalCrit/totalHit
+    directHit = totalDH/totalHit
+
+    playerSmallSummary.value[playerID] = {
+      totalDamage,
+      rDPS,
+      aDPS,
+      nDPS,
+      cDPS,
+      crit,
+      directHit,
+      directCrit
+    }
+  }
+
+  function calcDPS(total: number, tableData: TableData): number {
+    const activeTime = (tableData.combatTime - tableData.damageDowntime) / 1000
+    return total / activeTime
+  }
+
   return {
     token,
     reports,
     loading,
     reportPlayers,
     lastReportPlayers,
+    playerSmallSummary,
     error,
     quota,
     fetchReport,
     fetchPlayers,
+    fetchPlayerSumary,
+    curatePlayerSummary,
     fetchAllEvents,
   }
 })
