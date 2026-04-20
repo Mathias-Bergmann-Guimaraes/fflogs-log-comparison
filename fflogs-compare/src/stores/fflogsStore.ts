@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { getToken } from '@/api/auth'
 import  *  as ql from '@/api/useQuery'
 import type { Actor, ReportMeta, ReportPlayers, RateLimitData, ReportFightEvents, ReportPlayerSummary, TableData, PlayerSummary, TableEntry } from '@/types/fflogs'
-import { toNum } from './fflogsUtils'
+import { toNum } from '../types/typesUtils'
 
 export const useFFLogsStore = defineStore('fflogs', () => {
   // Cached OAuth token — fetched once on first API call, reused for all subsequent calls
@@ -150,12 +150,10 @@ export const useFFLogsStore = defineStore('fflogs', () => {
     let rDPS = 0
     let nDPS = 0
     let cDPS = 0
-    let crit = 0
     let totalCrit = 0
     let totalDH = 0
     let totalHit = 0
-    let directHit = 0
-    let directCrit = 0
+    let totalHittableActions = 0
     if(tableData.entries){
       tableData.entries.forEach((entry) =>{
         totalDamage += entry.total
@@ -164,35 +162,36 @@ export const useFFLogsStore = defineStore('fflogs', () => {
         nDPS += toNum(entry.totalRDPS)
         cDPS += toNum(entry.totalRDPS)
 
-        crit += entry.critHitCount/entry.hitCount
-        totalCrit += entry.critHitCount
-        totalDH += entry.multistrikeHitCount
-        totalHit += entry.hitCount
+      if(entry.hitCount){
+        const cominedTotalHit = entry.hitCount + entry.multistrikeHitCount
+        totalCrit += entry.critHitCount/cominedTotalHit
+        totalDH += entry.multistrikeHitCount/cominedTotalHit
 
+        totalHittableActions++
+        }
       })
+      totalHit += totalDH
     }
-    aDPS = calcDPS(aDPS, tableData)
-    rDPS = calcDPS(rDPS, tableData)
-    nDPS = calcDPS(nDPS, tableData)
-    cDPS = calcDPS(cDPS, tableData)
-    crit = totalCrit/totalHit
-    directHit = totalDH/totalHit
+
+
 
     playerSmallSummary.value[playerID] = {
       totalDamage,
-      rDPS,
-      aDPS,
-      nDPS,
-      cDPS,
-      crit,
-      directHit,
-      directCrit
+      rDPS: calcDPS(rDPS, tableData) * 1000,
+      aDPS: calcDPS(aDPS, tableData) * 1000,
+      nDPS: calcDPS(nDPS, tableData) * 1000,
+      cDPS: calcDPS(cDPS, tableData) * 1000,
+      crit: totalCrit/totalHittableActions,
+      directHit: totalDH/totalHittableActions
     }
   }
 
   function calcDPS(total: number, tableData: TableData): number {
-    const activeTime = (tableData.combatTime - tableData.damageDowntime) / 1000
-    return total / activeTime
+    if(!tableData.damageDowntime){
+      return total/tableData.combatTime
+    }
+    const activeTime = (tableData.combatTime - tableData.damageDowntime) //idk why /1000 makes no difference here
+    return (total / activeTime)
   }
 
   return {

@@ -90,7 +90,7 @@ export interface TableData {
   entries: TableEntry[]
   totalTime: number
   combatTime: number
-  damageDowntime: number
+  damageDowntime?: number
   logVersion: number
   gameVersion: number
 }
@@ -103,5 +103,4 @@ export interface PlayerSummary {
   cDPS: number
   crit: number //crit%
   directHit: number //DH%
-  directCrit: number //direct Crit %
 }

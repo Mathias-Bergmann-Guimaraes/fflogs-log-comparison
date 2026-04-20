@@ -6,10 +6,10 @@
       </template>
     </a-card-meta>
     <div class="flex items-center justify-around w-full">
-      <span>rdps {{ playerSummaryData.rDPS }}</span>
-      <span>adps {{ playerSummaryData.aDPS }}</span>
-      <span>Crit% {{ playerSummaryData.crit }}</span>
-      <span>DH% {{ playerSummaryData.directHit }}</span>
+      <span>rdps {{ playerSummaryData.rDPS.toFixed(2) }}</span>
+      <span>adps {{ playerSummaryData.aDPS.toFixed(2) }}</span>
+      <span>Crit% {{ playerSummaryData.crit.toFixed(2) }}</span>
+      <span>DH% {{ playerSummaryData.directHit.toFixed(2) }}</span>
     </div>
   </a-card>
 </template>
