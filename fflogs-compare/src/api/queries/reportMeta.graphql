@@ -1,14 +1,15 @@
-query ReportMeta($code: String!) {
+query ReportMeta($code: String!, $fightIDs: [Int!]!) {
   reportData {
     report(code: $code) {
       title
       startTime
       endTime
-      fights {
+      fights(fightIDs: $fightIDs) {
         id
         name
         kill
-        difficulty
+        startTime
+        endTime
         lastPhaseAsAbsoluteIndex
       }
     }

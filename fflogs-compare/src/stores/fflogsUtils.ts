@@ -1,4 +1,4 @@
-import type { ReportURL } from "./fflogsDataType";
+import type { ReportURL } from "@/types/fflogs";
 
 export function parseReportURL(input:string): ReportURL{
    try {

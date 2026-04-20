@@ -15,16 +15,15 @@
 </template>
 
 <script setup lang="ts">
-import type { PlayerDetails } from '@/stores/fflogsDataType';
+import type { Actor } from '@/types/fflogs'
 import { computed, ref } from 'vue'
 
 const props = defineProps<{
-  player: PlayerDetails
+  player: Actor
 }>()
 
 const playerName = ref<string>(props.player.name)
 const playerJob = ref<string>(props.player.subType)
 
 const jobIconPath = computed(() => `/job/${playerJob.value}.png`)
-
 </script>
