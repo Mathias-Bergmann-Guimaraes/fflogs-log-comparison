@@ -1,0 +1,17 @@
+query ReportPlayers($code: String!, $fightIDs: [Int!]!) {
+  reportData {
+    report(code: $code) {
+      masterData {
+        actors(type: "Player") {
+          id
+          name
+          subType
+          server
+        }
+      }
+      fights(fightIDs: $fightIDs) {
+        friendlyPlayers
+      }
+    }
+  }
+}

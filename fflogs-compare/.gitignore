@@ -40,3 +40,6 @@ __screenshots__/
 
 # General stuff
 .env
+
+# GraphQL codegen
+src/api/__generated__/

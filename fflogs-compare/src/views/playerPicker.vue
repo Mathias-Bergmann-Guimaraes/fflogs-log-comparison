@@ -1,8 +1,8 @@
 <template>
   <a-input-search v-model:value="url" placeholder="Paste report code e.g. abc123XYZ" enter-button="Fetch"
-    :loading="store.loading" @search="store.fetchPlayers(reportURL)" />
+    :loading="store.loading" @search="store.fetchPlayers(reportURL.code, reportURL?.fightIDs)" />
 
-  <div v-for="player in store.lastReportPlayers" :key="player.id">
+  <div v-for="player in store.lastReportPlayers" :key="player.id" class="py-1">
     <player-card :player="player"></player-card>
   </div>
 </template>

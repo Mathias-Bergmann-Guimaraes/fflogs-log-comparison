@@ -1,0 +1,7 @@
+query RateLimitData {
+  rateLimitData {
+    limitPerHour
+    pointsSpentThisHour
+    pointsResetIn
+  }
+}

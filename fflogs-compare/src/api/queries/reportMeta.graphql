@@ -1,0 +1,16 @@
+query ReportMeta($code: String!) {
+  reportData {
+    report(code: $code) {
+      title
+      startTime
+      endTime
+      fights {
+        id
+        name
+        kill
+        difficulty
+        lastPhaseAsAbsoluteIndex
+      }
+    }
+  }
+}

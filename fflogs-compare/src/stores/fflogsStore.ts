@@ -1,23 +1,40 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getToken } from '@/api/auth'
-import { queryModules } from '@/api/useQuery'
-import * as FFLogs from './fflogsDataType'
+import { fetchRateLimitData, fetchReportMeta, fetchReportPlayers, fetchReportData } from '@/api/useQuery'
+import type { RateLimitDataQuery, ReportMetaQuery, ReportPlayersQuery } from '@/api/__generated__/graphql'
 
+type ReportMeta = ReportMetaQuery['reportData']['report']
+type ReportPlayers = ReportPlayersQuery['reportData']['report']
+type Actor = ReportPlayers['masterData']['actors'][number]
 
 export const useFFLogsStore = defineStore('fflogs', () => {
   const token = ref<string | null>(null)
-  const reports = ref<Record<string, FFLogs.Report>>({})
-  const reportPlayers = ref<Record<string, FFLogs.ReportPlayers>>({})
-  const lastReportPlayers = ref<FFLogs.PlayerDetails[]>()
+  const reports = ref<Record<string, ReportMeta>>({})
+  const reportPlayers = ref<Record<string, ReportPlayers>>({})
+  const lastReportPlayers = ref<Actor[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const quota = ref<FFLogs.RateLimitData | null>(null)
+  const quota = ref<RateLimitDataQuery['rateLimitData'] | null>(null)
 
   async function ensureToken() {
     if (!token.value) {
       token.value = await getToken()
     }
+  }
+
+  async function fetchAllEvents(code: string, fightIDs: number[], startTime: number, endTime: number) {
+    const allEvents: unknown[] = []
+    let nextPage: number | null = startTime
+
+    while (nextPage !== null) {
+      const data = await fetchReportData(token.value!, { code, fightIDs, startTime: nextPage, endTime })
+      const events = data.reportData.report.events
+      if (events?.data) allEvents.push(...(events.data as unknown[]))
+      nextPage = events?.nextPageTimestamp ?? null
+    }
+
+    return allEvents
   }
 
   async function fetchReport(code: string) {
@@ -29,10 +46,13 @@ export const useFFLogsStore = defineStore('fflogs', () => {
     try {
       await ensureToken()
 
-      const data = await queryModules(token.value!, ['rateLimitData', 'reportData'], { code })
+      const [rateLimitData, reportData] = await Promise.all([
+        fetchRateLimitData(token.value!),
+        fetchReportMeta(token.value!, { code }),
+      ])
 
-      quota.value = data.rateLimitData
-      reports.value[code] = data.reportData.report
+      quota.value = rateLimitData.rateLimitData
+      reports.value[code] = reportData.reportData.report
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : 'Unknown error'
     } finally {
@@ -40,25 +60,27 @@ export const useFFLogsStore = defineStore('fflogs', () => {
     }
   }
 
-  async function fetchPlayers(report: FFLogs.ReportURL) {
-    if (reports.value[report.code]) return
+  async function fetchPlayers(code: string, fightIDs: number[] = []) {
+    if (reportPlayers.value[code]) return
 
     loading.value = true
     error.value = null
 
     try {
       await ensureToken()
-      const code = report.code
-      const fightIDs = report.fightIDs
-      console.log({code: report.code, fightIDs: report.fightIDs});
 
-      const data = await queryModules(token.value!, ['rateLimitData', 'reportPlayers'], { code, fightIDs })
+      const [rateLimitData, playersData] = await Promise.all([
+        fetchRateLimitData(token.value!),
+        fetchReportPlayers(token.value!, { code, fightIDs }),
+      ])
 
-      quota.value = data.rateLimitData
-      reportPlayers.value[report.code] = data.reportData.report
-      const uniqueActivePlayerId = [... new Set(data.reportData.report.fights?.flatMap(fight => fight.friendlyPlayers))]
+      quota.value = rateLimitData.rateLimitData
 
-      lastReportPlayers.value = curatePlayers(data.reportData.report.masterData.actors, uniqueActivePlayerId)
+      const report = playersData.reportData.report
+      reportPlayers.value[code] = report
+
+      const activeIDs = new Set(report.fights.flatMap(f => f.friendlyPlayers))
+      lastReportPlayers.value = curatePlayers(report.masterData.actors, activeIDs)
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : 'Unknown error'
     } finally {
@@ -66,10 +88,9 @@ export const useFFLogsStore = defineStore('fflogs', () => {
     }
   }
 
-  function curatePlayers(allPlayers: FFLogs.PlayerDetails[], activePlayerIDs: number[]): FFLogs.PlayerDetails[]{
-    // filter for only those players who are in the selected fights
-    // Limit Break is included in the active player so we need to remove it manualy
-    return allPlayers.filter((player) => activePlayerIDs.includes(player.id) && player.subType !== 'LimitBreak')
+  function curatePlayers(actors: Actor[], activeIDs: Set<number>): Actor[] {
+    // Limit Break has its own actor entry and must be excluded manually
+    return actors.filter(a => activeIDs.has(a.id) && a.subType !== 'LimitBreak')
   }
 
   return {
@@ -81,5 +102,7 @@ export const useFFLogsStore = defineStore('fflogs', () => {
     error,
     quota,
     fetchReport,
-    fetchPlayers }
+    fetchPlayers,
+    fetchAllEvents,
+  }
 })
