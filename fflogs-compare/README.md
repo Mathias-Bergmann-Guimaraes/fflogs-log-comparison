@@ -27,6 +27,7 @@ See [Vite Configuration Reference](https://vite.dev/config/).
 
 ```sh
 npm install
+npm run codegen
 ```
 
 ### Compile and Hot-Reload for Development

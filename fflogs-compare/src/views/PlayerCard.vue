@@ -22,8 +22,8 @@ const props = defineProps<{
   player: PlayerDetails
 }>()
 
-const playerName = ref<String>(props.player.name)
-const playerJob = ref<String>(props.player.subType)
+const playerName = ref<string>(props.player.name)
+const playerJob = ref<string>(props.player.subType)
 
 const jobIconPath = computed(() => `/job/${playerJob.value}.png`)
 
