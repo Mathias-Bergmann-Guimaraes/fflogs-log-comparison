@@ -1,0 +1,7 @@
+query TopPlayers($encounterID: Int!, $specName: String!) {
+  worldData {
+    encounter(id: $encounterID) {
+      characterRankings(specName: $specName)
+    }
+  }
+}

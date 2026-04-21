@@ -4,7 +4,7 @@
 
   <div v-for="player in store.lastReportPlayers" :key="player.id" class="py-1">
     <player-card v-if="store.playerSmallSummary[player.id]" :player="player"
-      :player-summary-data="store.playerSmallSummary[player.id]!"></player-card>
+      :player-summary-data="store.playerSmallSummary[player.id]!" @select="handlePlayerSelect"></player-card>
   </div>
 </template>
 
@@ -14,17 +14,24 @@ import { computed, ref } from 'vue';
 import { useFFLogsStore } from '@/stores/fflogsStore'
 import PlayerCard from './PlayerCard.vue';
 import { parseReportURL } from '@/stores/fflogsUtils';
-import type { ReportURL, TableData } from '@/types/fflogs';
+import type { ReportURL, TableData, Actor } from '@/types/fflogs';
+
+const emit = defineEmits<{
+  (e: 'selected', player: Actor, code: string): void
+}>()
 
 const store = useFFLogsStore()
 const url = ref('');
 const reportURL = computed(() => parseReportURL(url.value))
 const playerSummaries = ref<Record<number, TableData>>({})
 
+function handlePlayerSelect(player: Actor) {
+  emit('selected', player, reportURL.value.code)
+}
+
 async function fetchReportInformation(report: ReportURL) {
   await store.fetchPlayers(report.code, report.fightIDs)
   await store.fetchReport(report.code, report.fightIDs)
-  store.fetchAllEvents(report.code, report?.fightIDs, store.reports[report.code]?.fights[0]?.startTime, store.reports[report.code]?.fights[0]?.endTime)
   playerSummaries.value = {}
   await Promise.all(
     store.lastReportPlayers.map(async (player) => {

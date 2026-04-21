@@ -12,7 +12,9 @@ import type {
   ReportFightEventsQuery,
   ReportFightEventsQueryVariables,
   ReportPlayerSummaryQuery,
-  ReportPlayerSummaryQueryVariables
+  ReportPlayerSummaryQueryVariables,
+  TopPlayersQueryVariables,
+  TopPlayersQuery
 } from '@/api/__generated__/graphql'
 
 import rateLimitDataGql from '@/api/queries/rateLimitData.graphql?raw'
@@ -20,6 +22,7 @@ import reportMetaGql from '@/api/queries/reportMeta.graphql?raw'
 import reportPlayersGql from '@/api/queries/reportPlayers.graphql?raw'
 import reportFightEvents from '@/api/queries/reportFightEvents.graphql?raw'
 import reportPlayerSummary from '@/api/queries/reportPlayerSummary.graphql?raw'
+import worldDataTopPlayers from '@/api/queries/worldDataTopPlayers.graphql?raw'
 
 export function fetchRateLimitData(token: string) {
   return query<RateLimitDataQuery>(token, rateLimitDataGql)
@@ -38,8 +41,10 @@ export function fetchReportFightEvents(token: string, variables: ReportFightEven
   return query<ReportFightEventsQuery, ReportFightEventsQueryVariables>(token, reportFightEvents, variables)
 }
 
-// fetchReportData returns paginated damage events — use fetchAllEvents in the store to collect all pages
 export function fetchReportPlayerSummary(token: string, variables: ReportPlayerSummaryQueryVariables) {
   return query<ReportPlayerSummaryQuery, ReportPlayerSummaryQueryVariables>(token, reportPlayerSummary, variables)
 }
 
+export function fetchTopPlayers(token: string, variables: TopPlayersQueryVariables) {
+  return query<TopPlayersQuery, TopPlayersQueryVariables>(token, worldDataTopPlayers, variables)
+}

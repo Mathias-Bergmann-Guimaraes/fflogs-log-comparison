@@ -104,3 +104,55 @@ export interface PlayerSummary {
   crit: number //crit%
   directHit: number //DH%
 }
+
+
+export interface TopPlayerReport {
+  code: string;
+  fightID: number;
+  startTime: number;
+}
+
+interface Guild {
+  id: number;
+  name: string;
+  faction: number;
+}
+
+interface Server {
+  id: number;
+  name: string;
+  region: string;
+}
+
+export interface RankingEntry {
+  name: string;
+  class: string;
+  spec: string;
+  amount: number;
+  hardModeLevel: number;
+  duration: number;
+  startTime: number;
+  report: TopPlayerReport;
+  lodestoneID: number;
+  guild?: Guild;
+  server: Server;
+  bracketData: number;
+  aDPS: number;
+  rDPS: number;
+  nDPS: number;
+  cDPS: number | string;
+  pDPS: number | string;
+}
+
+export interface CharacterRankings {
+  page: number;
+  hasMorePages: boolean;
+  count: number;
+  rankings: RankingEntry[];
+}
+
+export interface TopPlayerDto {
+  name: string
+  spec: string
+  report: TopPlayerReport
+}

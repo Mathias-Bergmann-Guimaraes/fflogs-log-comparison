@@ -6,6 +6,7 @@ query ReportMeta($code: String!, $fightIDs: [Int!]!) {
       endTime
       fights(fightIDs: $fightIDs) {
         id
+        encounterID
         name
         kill
         startTime

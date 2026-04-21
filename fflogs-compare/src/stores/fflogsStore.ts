@@ -1,8 +1,10 @@
+import { WorldData, Encounter, EncounterCharacterRankingsArgs } from './../api/__generated__/graphql';
+import { RankingEntry } from './../types/fflogs';
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getToken } from '@/api/auth'
 import  *  as ql from '@/api/useQuery'
-import type { Actor, ReportMeta, ReportPlayers, RateLimitData, ReportFightEvents, ReportPlayerSummary, TableData, PlayerSummary, TableEntry } from '@/types/fflogs'
+import type { Actor, ReportMeta, ReportPlayers, RateLimitData, ReportFightEvents, ReportPlayerSummary, TableData, PlayerSummary, TableEntry, CharacterRankings, TopPlayerDto, TopPlayerReport } from '@/types/fflogs'
 import { toNum } from '../types/typesUtils'
 
 export const useFFLogsStore = defineStore('fflogs', () => {
@@ -13,11 +15,14 @@ export const useFFLogsStore = defineStore('fflogs', () => {
   const reports = ref<Record<string, ReportMeta>>({})
   const reportPlayers = ref<Record<string, ReportPlayers>>({})
   const fightEvents = ref<Record<string, ReportFightEvents>>({})
+  const topPlayers = ref<Record<string, TopPlayerDto[]>>({})
+  const topPlayersReport = ref<>()
   const playerSummary = ref<Record<string, ReportPlayerSummary>>({})
   const playerSmallSummary = ref<Record<string, PlayerSummary>>({})
 
   // Players who participated in the selected fights, with LimitBreak filtered out
   const lastReportPlayers = ref<Actor[]>([])
+  const maxPlayerToCompare = ref<number>(10)
 
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -135,6 +140,24 @@ export const useFFLogsStore = defineStore('fflogs', () => {
     }
   }
 
+  async function fetchTopPlayers(job: string, code: string): Promise<TopPlayerDto[]> {
+    const encounterID = reports.value[code]?.fights[0]?.encounterID
+    if (!encounterID){
+      error.value = 'no fight'
+      return []
+    }
+    const data = await ql.fetchTopPlayers(token.value!, { specName: job, encounterID })
+    const topRankings = (data.worldData.encounter.characterRankings as { rankings: CharacterRankings }).rankings.rankings.splice(0, maxPlayerToCompare.value)
+    const chads = topRankings.map((ranking) => ({
+      name: ranking.name,
+      spec: ranking.spec,
+      report: ranking.report as TopPlayerReport,
+    })) as TopPlayerDto[]
+
+    topPlayers.value[`${job}-${encounterID}`] = chads
+    return chads
+  }
+
   function curatePlayers(actors: Actor[], activeIDs: Set<number>): Actor[] {
     // Limit Break appears as a player in friendlyPlayers but is not a real player slot
     return actors.filter(a => activeIDs.has(a.id) && a.subType !== 'LimitBreak')
@@ -173,8 +196,6 @@ export const useFFLogsStore = defineStore('fflogs', () => {
       totalHit += totalDH
     }
 
-
-
     playerSmallSummary.value[playerID] = {
       totalDamage,
       rDPS: calcDPS(rDPS, tableData) * 1000,
@@ -200,6 +221,7 @@ export const useFFLogsStore = defineStore('fflogs', () => {
     loading,
     reportPlayers,
     lastReportPlayers,
+    topPlayers,
     playerSmallSummary,
     error,
     quota,
@@ -208,5 +230,6 @@ export const useFFLogsStore = defineStore('fflogs', () => {
     fetchPlayerSumary,
     curatePlayerSummary,
     fetchAllEvents,
+    fetchTopPlayers,
   }
 })
