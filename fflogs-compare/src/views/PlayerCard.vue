@@ -1,5 +1,5 @@
 <template>
-  <a-card style="cursor: pointer" @click="emit('select', props.player, props.playerSummaryData)">
+  <a-card style="cursor: pointer" @click="emit('select', props.playerSubType)">
     <a-card-meta :title="playerName">
       <template #avatar>
         <a-avatar :src="jobIconPath"></a-avatar>
@@ -15,24 +15,22 @@
 </template>
 
 <script setup lang="ts">
-import type { Actor, PlayerSummary } from '@/types/fflogs'
-import { computed, ref } from 'vue'
+import type { PlayerSummary } from '@/types/fflogs'
+import { computed } from 'vue'
 
 const props = defineProps<{
   //TODO: remove player and use actual information needed like name/ subtype (job)
-  player: Actor
+  playerName: string
+  playerSubType: string
   playerSummaryData: PlayerSummary
 }>()
 
 const emit = defineEmits<{
-  (e: 'select', player: Actor, summary: PlayerSummary): void
+  (e: 'select', playerSubType: string): void
 }>()
 
-const playerName = ref<string>(props.player.name)
-const playerJob = ref<string>(props.player.subType)
-
-function percentage(num: number): string{
+function percentage(num: number): string {
   return (num * 100).toFixed(2) + '%'
 }
-const jobIconPath = computed(() => `/job/${playerJob.value}.png`)
+const jobIconPath = computed(() => `/job/${props.playerSubType}.png`)
 </script>

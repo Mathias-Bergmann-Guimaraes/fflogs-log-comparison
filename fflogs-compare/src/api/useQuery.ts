@@ -14,7 +14,9 @@ import type {
   ReportPlayerSummaryQuery,
   ReportPlayerSummaryQueryVariables,
   TopPlayersQueryVariables,
-  TopPlayersQuery
+  TopPlayersQuery,
+  ReportPlayerDetailsQueryVariables,
+  ReportPlayerDetailsQuery
 } from '@/api/__generated__/graphql'
 
 import rateLimitDataGql from '@/api/queries/rateLimitData.graphql?raw'
@@ -23,6 +25,7 @@ import reportPlayersGql from '@/api/queries/reportPlayers.graphql?raw'
 import reportFightEvents from '@/api/queries/reportFightEvents.graphql?raw'
 import reportPlayerSummary from '@/api/queries/reportPlayerSummary.graphql?raw'
 import worldDataTopPlayers from '@/api/queries/worldDataTopPlayers.graphql?raw'
+import reportPlayerByJob from '@/api/queries/reportPlayerDetails.graphql?raw'
 
 export function fetchRateLimitData(token: string) {
   return query<RateLimitDataQuery>(token, rateLimitDataGql)
@@ -48,3 +51,8 @@ export function fetchReportPlayerSummary(token: string, variables: ReportPlayerS
 export function fetchTopPlayers(token: string, variables: TopPlayersQueryVariables) {
   return query<TopPlayersQuery, TopPlayersQueryVariables>(token, worldDataTopPlayers, variables)
 }
+
+export function fetchPlayerDetails(token: string, variables: ReportPlayerDetailsQueryVariables) {
+  return query<ReportPlayerDetailsQuery, ReportPlayerDetailsQueryVariables>(token, reportPlayerByJob, variables)
+}
+

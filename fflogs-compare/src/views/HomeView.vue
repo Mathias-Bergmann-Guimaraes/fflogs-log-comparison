@@ -2,7 +2,8 @@
   <div style="padding: 2rem">
     <player-picker @selected="handleSelectedJob"></player-picker>
 
-    <top-players v-if="isCompareJobSelected && selectedJobAndFight" :top-players="store.topPlayers[selectedJobAndFight] ?? []"></top-players>
+    <top-players v-if="isCompareJobSelected && selectedJobAndFight"
+      :top-players="store.topPlayers[selectedJobAndFight] ?? []"></top-players>
 
 
     <div v-if="store.quota" style="margin-top: 1rem">
@@ -22,8 +23,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useFFLogsStore } from '@/stores/fflogsStore'
-import PlayerPicker from './playerPicker.vue'
-import type { Actor } from '@/types/fflogs'
+import PlayerPicker from './PlayerPicker.vue'
 import TopPlayers from './TopPlayers.vue'
 
 const store = useFFLogsStore()
@@ -46,11 +46,11 @@ const resetMinutes = computed(() => {
   return Math.ceil(store.quota.pointsResetIn / 60)
 })
 
-async function handleSelectedJob(player: Actor, code: string) {
-  const data = await store.fetchTopPlayers(player.subType, code)
+async function handleSelectedJob(playerSubType: string, code: string) {
+  const data = await store.fetchTopPlayers(playerSubType, code)
 
   if (data) {
-    selectedJobAndFight.value = `${player.subType}-${store.reports[code]?.fights[0]?.encounterID}`
+    selectedJobAndFight.value = `${playerSubType}-${store.reports[code]?.fights[0]?.encounterID}`
     isCompareJobSelected.value = true
   }
 }

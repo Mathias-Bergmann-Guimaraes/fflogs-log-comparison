@@ -1,0 +1,7 @@
+query ReportPlayerDetails($code: String!, $fightIDs: [Int!]!) {
+  reportData {
+    report(code: $code) {
+      playerDetails(fightIDs: $fightIDs)
+    }
+  }
+}

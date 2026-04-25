@@ -1,4 +1,4 @@
-import type { RateLimitDataQuery, ReportMetaQuery, ReportPlayersQuery, ReportFightEventsQuery, ReportPlayerSummaryQuery } from '@/api/__generated__/graphql'
+import type { RateLimitDataQuery, ReportMetaQuery, ReportPlayersQuery, ReportFightEventsQuery, ReportPlayerSummaryQuery, ReportPlayerDetailsQuery } from '@/api/__generated__/graphql'
 
 // Unwrap deeply nested query shapes into flat, reusable types.
 // Using index access keeps these in sync with codegen — no manual updates needed.
@@ -7,8 +7,18 @@ export type ReportPlayers = ReportPlayersQuery['reportData']['report']
 export type Actor = ReportPlayers['masterData']['actors'][number]
 export type RateLimitData = RateLimitDataQuery['rateLimitData']
 export type ReportFightEvents = ReportFightEventsQuery['reportData']['report']
+type IncompleteReportPlayersDetails = ReportPlayerDetailsQuery['reportData']['report']['playerDetails']
 // export type ReportPlayerSummary = ReportPlayerSummaryQuery['reportData']['report']
 export type ReportPlayerSummary = TableData
+
+// MARK: JSON helpers
+// since the API returs data as raw JSON and no given structure there is adjustment needed to
+// bring it into a organized way
+export interface ReportPlayersDetails extends Omit<IncompleteReportPlayersDetails, 'playerDetails'>{
+  data:{
+    playerDetails: ReportPlayersRoles
+  }
+}
 
 
 // Non-GraphQL domain type used for parsing report URLs
@@ -155,4 +165,26 @@ export interface TopPlayerDto {
   name: string
   spec: string
   report: TopPlayerReport
+}
+
+// MARK: PLAYER
+
+export interface ReportPlayersRoles{
+
+  tanks: PlayerDetails[]
+  healers: PlayerDetails[]
+  dps: PlayerDetails[]
+
+}
+
+export interface PlayerDetails{
+  name: string
+  id: number
+  guid: number
+  type: string
+  server: string
+  icon: string
+  potionUse: number
+  healthstoneUse: number
+  combatInfo: string[]
 }
