@@ -1,5 +1,8 @@
 <template>
-  <a-card style="cursor: pointer" @click="emit('select', props.playerSubType)">
+  <a-card
+    style="cursor: pointer"
+    @click="emit('select', props.playerSubType)"
+  >
     <a-card-meta :title="playerName">
       <template #avatar>
         <a-avatar :src="jobIconPath"></a-avatar>

@@ -2,21 +2,19 @@
   <div style="padding: 2rem">
     <player-picker @selected="handleSelectedJob"></player-picker>
 
-    <top-players v-if="isCompareJobSelected && selectedJobAndFight"
-      :top-players="store.topPlayers[selectedJobAndFight] ?? []"></top-players>
+    <top-players v-if="isCompareJobSelected && selectedJobAndFight" :top-players="store.topPlayers[selectedJobAndFight] ?? []"></top-players>
 
-
-    <div v-if="store.quota" style="margin-top: 1rem">
-      <a-progress :percent="quotaPercent" :status="quotaStatus"
-        :format="() => `${store.quota!.pointsSpentThisHour} / ${store.quota!.limitPerHour} pts`" />
-      <span style="font-size: 0.8rem; color: #888">
-        Resets in {{ resetMinutes }} min
-      </span>
+    <div v-if="store.quota" style="margin-top: 1rem" class="w-full flex flex-col">
+      <a-progress
+        :percent="quotaPercent"
+        :status="quotaStatus"
+        :format="() => `${store.quota!.pointsSpentThisHour} / ${store.quota!.limitPerHour} pts`"
+        class="max-w-[95%]"
+      />
+      <span style="font-size: 0.8rem; color: #888"> Resets in {{ resetMinutes }} min </span>
     </div>
 
-
-    <a-alert v-if="store.error" type="error" :message="store.error" style="margin-top: 1rem" />
-
+    <a-alert v-if="store.error" type="error" :message="store.error" style="margin-top: 1rem" class="w-full" />
   </div>
 </template>
 
@@ -54,5 +52,4 @@ async function handleSelectedJob(playerSubType: string, code: string) {
     isCompareJobSelected.value = true
   }
 }
-
 </script>
