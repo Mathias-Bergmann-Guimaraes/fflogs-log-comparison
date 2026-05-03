@@ -1,0 +1,161 @@
+{
+  "name": "Verholy",
+  "guid": 7526,
+  "type": 1024,
+  "total": 154651,
+  "abilityIcon": "003000-003224.png",
+  "composite": true,
+  "totalRDPS": "138949.68553459118",
+  "totalRDPSTaken": "15701.314465408821",
+  "totalRDPSGiven": 0,
+  "totalADPS": 154651,
+  "totalNDPS": "138949.68553459118",
+  "totalCDPS": "154651.00000000003",
+  "given": [],
+  "taken": [
+    {
+      "guid": 1001878,
+      "name": "Divination",
+      "total": "8545.734895807553",
+      "type": "Astrologian",
+      "abilityIcon": "213000-213245.png"
+    },
+    {
+      "guid": 1003685,
+      "name": "Starry Muse",
+      "total": "7155.57956960127",
+      "type": "Pictomancer",
+      "abilityIcon": "213000-213808.png"
+    }
+  ],
+  "subentries": [
+    {
+      "name": "Verholy",
+      "guid": 7526,
+      "actor": 1064,
+      "type": 1024,
+      "actorName": "Ki To",
+      "actorIcon": "RedMage",
+      "actorType": "RedMage",
+      "total": 154651,
+      "abilityIcon": "003000-003224.png",
+      "totalRDPS": "138949.68553459118",
+      "totalRDPSTaken": "15701.314465408821",
+      "totalRDPSGiven": 0,
+      "totalADPS": 154651,
+      "totalNDPS": "138949.68553459118",
+      "totalCDPS": "154651.00000000003",
+      "given": [],
+      "taken": [
+        {
+          "guid": 1001878,
+          "name": "Divination",
+          "total": "8545.734895807553",
+          "type": "Astrologian",
+          "abilityIcon": "213000-213245.png"
+        },
+        {
+          "guid": 1003685,
+          "name": "Starry Muse",
+          "total": "7155.57956960127",
+          "type": "Pictomancer",
+          "abilityIcon": "213000-213808.png"
+        }
+      ],
+      "uses": 2,
+      "hitCount": 2,
+      "tickCount": 0,
+      "tickMissCount": 0,
+      "missCount": 0,
+      "multistrikeHitCount": 0,
+      "multistrikeTickCount": 0,
+      "multistrikeMissCount": 0,
+      "multistrikeTickMissCount": 0,
+      "critHitCount": 1,
+      "critTickCount": 0,
+      "sources": [
+        {
+          "name": "Ki To",
+          "total": 154651,
+          "type": "RedMage",
+          "icon": "RedMage"
+        }
+      ],
+      "targets": [
+        {
+          "name": "Fatebreaker",
+          "total": 154651,
+          "type": "Boss"
+        }
+      ],
+      "hitdetails": [
+        {
+          "type": "Hit",
+          "total": 57604,
+          "count": 1,
+          "absorbOrOverheal": 0,
+          "min": 57604,
+          "max": 57604
+        },
+        {
+          "type": "Critical Hit",
+          "total": 97047,
+          "count": 1,
+          "absorbOrOverheal": 0,
+          "min": 97047,
+          "max": 97047
+        }
+      ],
+      "multistrikedetails": [],
+      "missdetails": [],
+      "multistrikemissdetails": []
+    }
+  ],
+  "uses": 2,
+  "hitCount": 2,
+  "tickCount": 0,
+  "tickMissCount": 0,
+  "missCount": 0,
+  "multistrikeHitCount": 0,
+  "multistrikeTickCount": 0,
+  "multistrikeMissCount": 0,
+  "multistrikeTickMissCount": 0,
+  "critHitCount": 1,
+  "critTickCount": 0,
+  "sources": [
+    {
+      "name": "Ki To",
+      "total": 154651,
+      "type": "RedMage",
+      "icon": "RedMage"
+    }
+  ],
+  "targets": [
+    {
+      "name": "Fatebreaker",
+      "total": 154651,
+      "type": "Boss"
+    }
+  ],
+  "hitdetails": [
+    {
+      "type": "Hit",
+      "total": 57604,
+      "count": 1,
+      "absorbOrOverheal": 0,
+      "min": 57604,
+      "max": 57604
+    },
+    {
+      "type": "Critical Hit",
+      "total": 97047,
+      "count": 1,
+      "absorbOrOverheal": 0,
+      "min": 97047,
+      "max": 97047
+    }
+  ],
+  "multistrikedetails": [],
+  "missdetails": [],
+  "multistrikemissdetails": []
+}

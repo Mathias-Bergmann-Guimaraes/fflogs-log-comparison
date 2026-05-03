@@ -12,6 +12,10 @@ query ReportMeta($code: String!, $fightIDs: [Int!]!) {
         startTime
         endTime
         lastPhaseAsAbsoluteIndex
+        phaseTransitions {
+          id
+          startTime
+        }
       }
     }
   }

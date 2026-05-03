@@ -2,7 +2,10 @@
   <div style="padding: 2rem">
     <player-picker @selected="handleSelectedJob"></player-picker>
 
-    <top-players v-if="isCompareJobSelected && selectedJobAndFight" :top-players="store.topPlayers[selectedJobAndFight] ?? []"></top-players>
+    <div v-if="loadingTopPlayers" style="margin-top: 2rem; display: flex; justify-content: center">
+      <a-spin size="large" tip="Loading top players..." />
+    </div>
+    <top-players v-else-if="isCompareJobSelected && selectedJobAndFight" :top-players="store.topPlayers[selectedJobAndFight] ?? []"></top-players>
 
     <div v-if="store.quota" style="margin-top: 1rem" class="w-full flex flex-col">
       <a-progress
@@ -27,6 +30,7 @@ import TopPlayers from './TopPlayers.vue'
 const store = useFFLogsStore()
 const isCompareJobSelected = ref<boolean>(false)
 const selectedJobAndFight = ref<string>('')
+const loadingTopPlayers = ref(false)
 
 const quotaPercent = computed(() => {
   if (!store.quota) return 0
@@ -45,11 +49,15 @@ const resetMinutes = computed(() => {
 })
 
 async function handleSelectedJob(playerSubType: string, code: string) {
-  const data = await store.fetchTopPlayers(playerSubType, code)
-
-  if (data) {
-    selectedJobAndFight.value = `${playerSubType}-${store.reports[code]?.fights[0]?.encounterID}`
-    isCompareJobSelected.value = true
+  loadingTopPlayers.value = true
+  try {
+    const data = await store.fetchTopPlayers(playerSubType, code)
+    if (data) {
+      selectedJobAndFight.value = `${playerSubType}-${store.reports[code]?.fights[0]?.encounterID}`
+      isCompareJobSelected.value = true
+    }
+  } finally {
+    loadingTopPlayers.value = false
   }
 }
 </script>

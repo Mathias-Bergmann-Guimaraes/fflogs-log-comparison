@@ -1,8 +1,5 @@
 <template>
-  <a-card
-    style="cursor: pointer"
-    @click="emit('select', props.playerSubType)"
-  >
+  <a-card style="cursor: pointer" @click="emit('select', props.playerSubType, props.playerName)">
     <a-card-meta :title="playerName">
       <template #avatar>
         <a-avatar :src="jobIconPath"></a-avatar>
@@ -29,7 +26,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'select', playerSubType: string): void
+  (e: 'select', playerSubType: string, playerName: string): void
 }>()
 
 function percentage(num: number): string {
