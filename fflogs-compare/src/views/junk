@@ -159,3 +159,154 @@
   "missdetails": [],
   "multistrikemissdetails": []
 }
+
+
+{
+  "name": "Verthunder III",
+  "guid": 25855,
+  "type": 1024,
+  "total": 326729,
+  "abilityIcon": "003000-003235.png",
+  "composite": true,
+  "totalRDPS": 326729,
+  "totalRDPSTaken": 0,
+  "totalRDPSGiven": 0,
+  "totalADPS": 326729,
+  "totalNDPS": 326729,
+  "totalCDPS": 326729,
+  "given": [],
+  "taken": [],
+  "subentries": [
+    {
+      "name": "Verthunder III",
+      "guid": 25855,
+      "actor": 1064,
+      "type": 1024,
+      "actorName": "Ki To",
+      "actorIcon": "RedMage",
+      "actorType": "RedMage",
+      "total": 326729,
+      "abilityIcon": "003000-003235.png",
+      "totalRDPS": 326729,
+      "totalRDPSTaken": 0,
+      "totalRDPSGiven": 0,
+      "totalADPS": 326729,
+      "totalNDPS": 326729,
+      "totalCDPS": 326729,
+      "given": [],
+      "taken": [],
+      "uses": 8,
+      "hitCount": 7,
+      "tickCount": 0,
+      "tickMissCount": 0,
+      "missCount": 0,
+      "multistrikeHitCount": 1,
+      "multistrikeTickCount": 0,
+      "multistrikeMissCount": 0,
+      "multistrikeTickMissCount": 0,
+      "critHitCount": 3,
+      "critTickCount": 0,
+      "sources": [
+        {
+          "name": "Ki To",
+          "total": 326729,
+          "type": "RedMage",
+          "icon": "RedMage"
+        }
+      ],
+      "targets": [
+        {
+          "name": "Fatebreaker",
+          "total": 326729,
+          "type": "Boss"
+        }
+      ],
+      "hitdetails": [
+        {
+          "type": "Hit",
+          "total": 132420,
+          "count": 4,
+          "absorbOrOverheal": 0,
+          "min": 30798,
+          "max": 37545
+        },
+        {
+          "type": "Critical Hit",
+          "total": 155398,
+          "count": 3,
+          "absorbOrOverheal": 0,
+          "min": 49364,
+          "max": 53667
+        }
+      ],
+      "multistrikedetails": [
+        {
+          "type": "Hit",
+          "total": 38911,
+          "count": 1,
+          "absorbOrOverheal": 0,
+          "min": 38911,
+          "max": 38911
+        }
+      ],
+      "missdetails": [],
+      "multistrikemissdetails": []
+    }
+  ],
+  "uses": 8,
+  "hitCount": 7,
+  "tickCount": 0,
+  "tickMissCount": 0,
+  "missCount": 0,
+  "multistrikeHitCount": 1,
+  "multistrikeTickCount": 0,
+  "multistrikeMissCount": 0,
+  "multistrikeTickMissCount": 0,
+  "critHitCount": 3,
+  "critTickCount": 0,
+  "sources": [
+    {
+      "name": "Ki To",
+      "total": 326729,
+      "type": "RedMage",
+      "icon": "RedMage"
+    }
+  ],
+  "targets": [
+    {
+      "name": "Fatebreaker",
+      "total": 326729,
+      "type": "Boss"
+    }
+  ],
+  "hitdetails": [
+    {
+      "type": "Hit",
+      "total": 132420,
+      "count": 4,
+      "absorbOrOverheal": 0,
+      "min": 30798,
+      "max": 37545
+    },
+    {
+      "type": "Critical Hit",
+      "total": 155398,
+      "count": 3,
+      "absorbOrOverheal": 0,
+      "min": 49364,
+      "max": 53667
+    }
+  ],
+  "multistrikedetails": [
+    {
+      "type": "Hit",
+      "total": 38911,
+      "count": 1,
+      "absorbOrOverheal": 0,
+      "min": 38911,
+      "max": 38911
+    }
+  ],
+  "missdetails": [],
+  "multistrikemissdetails": []
+}

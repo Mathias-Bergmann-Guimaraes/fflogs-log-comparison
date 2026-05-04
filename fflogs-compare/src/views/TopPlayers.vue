@@ -12,9 +12,11 @@
       :player-i-d="playerReportInfo[player.name]?.playerID ?? 0"
       :start-time="playerReportInfo[player.name]?.startTime ?? 0"
       :end-time="playerReportInfo[player.name]?.endTime ?? 0"
+      :phases="phases[player.name] ?? []"
     />
     <player-card
       v-else
+      :player-i-d="playerID[player.name] ?? 0"
       :player-name="player.name"
       :player-sub-type="player.spec"
       :player-summary-data="playerSummaries[player.name]!"
@@ -23,7 +25,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import type { PlayerSummary, TopPlayerDto } from '@/types/fflogs'
+import type { PhaseDto, PlayerSummary, TopPlayerDto } from '@/types/fflogs'
 import PlayerCard from './PlayerCard.vue'
 import { useFFLogsStore } from '@/stores/fflogsStore'
 import { ref, watch } from 'vue'
@@ -41,7 +43,9 @@ interface PlayerReportInfo {
 
 const playerSummaries = ref<Record<string, PlayerSummary | undefined>>({})
 const playerReportInfo = ref<Record<string, PlayerReportInfo>>({})
+const playerID = ref<Record<string, number>>({})
 const selectedPlayer = ref<string>('')
+const phases = ref<Record<string, PhaseDto[]>>({})
 const props = defineProps<{
   topPlayers: TopPlayerDto[]
 }>()
@@ -56,6 +60,8 @@ async function fetchReportInformation(player: TopPlayerDto) {
   const allPlayers = [...topPlayer.tanks, ...topPlayer.healers, ...topPlayer.dps]
   const topPlayerId = allPlayers.find((player) => player.type === spec)
 
+  playerID.value[player.name] = topPlayerId?.id ?? 0
+  phases.value[player.name] = (topPlayerReport?.fights[0]?.phaseTransitions ?? []) as PhaseDto[]
   console.log({ topPlayerReport, topPlayer })
 
   const startTime = topPlayerReport?.fights[0]?.startTime

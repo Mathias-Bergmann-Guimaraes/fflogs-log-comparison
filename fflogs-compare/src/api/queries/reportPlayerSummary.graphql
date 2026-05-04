@@ -1,19 +1,7 @@
-query ReportPlayerSummary(
-  $code: String!
-  $fightIDs: [Int!]!
-  $startTime: Float!
-  $endTime: Float!
-  $sourceID: Int!
-) {
+query ReportPlayerSummary($code: String!, $fightIDs: [Int!]!, $startTime: Float!, $endTime: Float!, $sourceID: Int!) {
   reportData {
     report(code: $code) {
-      table(
-        fightIDs: $fightIDs
-        startTime: $startTime
-        endTime: $endTime
-        sourceID: $sourceID
-        dataType: DamageDone
-      )
+      table(fightIDs: $fightIDs, startTime: $startTime, endTime: $endTime, sourceID: $sourceID, dataType: DamageDone)
     }
   }
 }

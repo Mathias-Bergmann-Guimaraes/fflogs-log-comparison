@@ -1,4 +1,11 @@
-import type { RateLimitDataQuery, ReportMetaQuery, ReportPlayersQuery, ReportFightEventsQuery, ReportPlayerSummaryQuery, ReportPlayerDetailsQuery } from '@/api/__generated__/graphql'
+import type {
+  RateLimitDataQuery,
+  ReportMetaQuery,
+  ReportPlayersQuery,
+  ReportFightEventsQuery,
+  ReportPlayerSummaryQuery,
+  ReportPlayerDetailsQuery,
+} from '@/api/__generated__/graphql'
 
 // Unwrap deeply nested query shapes into flat, reusable types.
 // Using index access keeps these in sync with codegen — no manual updates needed.
@@ -14,12 +21,11 @@ export type ReportPlayerSummary = TableData
 // MARK: JSON helpers
 // since the API returs data as raw JSON and no given structure there is adjustment needed to
 // bring it into a organized way
-export interface ReportPlayersDetails extends Omit<IncompleteReportPlayersDetails, 'playerDetails'>{
-  data:{
+export interface ReportPlayersDetails extends Omit<IncompleteReportPlayersDetails, 'playerDetails'> {
+  data: {
     playerDetails: ReportPlayersRoles
   }
 }
-
 
 // Non-GraphQL domain type used for parsing report URLs
 export interface ReportURL {
@@ -27,26 +33,23 @@ export interface ReportURL {
   fightIDs: number[]
 }
 
-
-
-export interface reportEvent{
+export interface reportEvent {
   timestamp: number
-  type: 'damage' | 'calculatingdamage'   // calculateddamage = snapshot, damage = when it lands
+  type: 'damage' | 'calculatingdamage' // calculateddamage = snapshot, damage = when it lands
   packetID: number
-  sourceID: number            // actor ID of who dealt it
-  targertID: number           // actor ID of who received it
-  abilityGameID: number       // the ability used
-  fight: number               // fight ID
-  hitType: 1 | 2              // 1 = normal, 2 = crit
-  amount: number              // actual damage dealt
-  unmitigatedAmount: number   // damage before mitigation
-  directHit?: boolean         // was it a direct hit
-  multiplier: number          // buff multiplier e.g. 1.05 = 5% buff active
-  bonusPercent?: number       // direct hit bonus %
-  buffs?: string              // dot-separated list of active buff IDs e.g. "1000049.1000851."
-  tick?: boolean              // true = DoT tick
+  sourceID: number // actor ID of who dealt it
+  targertID: number // actor ID of who received it
+  abilityGameID: number // the ability used
+  fight: number // fight ID
+  hitType: 1 | 2 // 1 = normal, 2 = crit
+  amount: number // actual damage dealt
+  unmitigatedAmount: number // damage before mitigation
+  directHit?: boolean // was it a direct hit
+  multiplier: number // buff multiplier e.g. 1.05 = 5% buff active
+  bonusPercent?: number // direct hit bonus %
+  buffs?: string // dot-separated list of active buff IDs e.g. "1000049.1000851."
+  tick?: boolean // true = DoT tick
 }
-
 
 export interface TableBuff {
   guid: number
@@ -75,8 +78,8 @@ export interface TableEntry {
   type: number
   total: number
   abilityIcon: string
-  composite?: boolean          // true = grouped ability (e.g. Veraero III has subentries)
-  subentries?: TableEntry[]    // composite entries contain the real per-actor data here
+  composite?: boolean // true = grouped ability (e.g. Veraero III has subentries)
+  subentries?: TableEntry[] // composite entries contain the real per-actor data here
   totalRDPS: string | number
   totalADPS: string | number
   totalNDPS: string | number
@@ -108,57 +111,56 @@ export interface TableData {
 export interface PlayerSummary {
   totalDamage: number
   rDPS: number
-  aDPS:number
+  aDPS: number
   nDPS: number
   cDPS: number
   crit: number //crit%
   directHit: number //DH%
 }
 
-
 export interface TopPlayerReport {
-  code: string;
-  fightID: number;
-  startTime: number;
+  code: string
+  fightID: number
+  startTime: number
 }
 
 interface Guild {
-  id: number;
-  name: string;
-  faction: number;
+  id: number
+  name: string
+  faction: number
 }
 
 interface Server {
-  id: number;
-  name: string;
-  region: string;
+  id: number
+  name: string
+  region: string
 }
 
 export interface RankingEntry {
-  name: string;
-  class: string;
-  spec: string;
-  amount: number;
-  hardModeLevel: number;
-  duration: number;
-  startTime: number;
-  report: TopPlayerReport;
-  lodestoneID: number;
-  guild?: Guild;
-  server: Server;
-  bracketData: number;
-  aDPS: number;
-  rDPS: number;
-  nDPS: number;
-  cDPS: number | string;
-  pDPS: number | string;
+  name: string
+  class: string
+  spec: string
+  amount: number
+  hardModeLevel: number
+  duration: number
+  startTime: number
+  report: TopPlayerReport
+  lodestoneID: number
+  guild?: Guild
+  server: Server
+  bracketData: number
+  aDPS: number
+  rDPS: number
+  nDPS: number
+  cDPS: number | string
+  pDPS: number | string
 }
 
 export interface CharacterRankings {
-  page: number;
-  hasMorePages: boolean;
-  count: number;
-  rankings: RankingEntry[];
+  page: number
+  hasMorePages: boolean
+  count: number
+  rankings: RankingEntry[]
 }
 
 export interface TopPlayerDto {
@@ -167,17 +169,55 @@ export interface TopPlayerDto {
   report: TopPlayerReport
 }
 
+export interface PhaseDto {
+  id: number
+  startTime: number
+}
+
+// MARK: GRAPH
+
+export interface GraphDowntime {
+  startTime: number
+  endTime: number
+}
+
+export interface GraphSeriesItem {
+  name: string
+  guid: number
+  type: number
+  pointStart: number
+  pointInterval: number
+  total: number
+  data: number[]
+}
+
+export interface GraphTotalSeriesItem {
+  name: 'Total'
+  type: 'Total'
+  id: 'Total'
+  pointStart: number
+  pointInterval: number
+  data: number[]
+}
+
+export type GraphSeries = GraphSeriesItem | GraphTotalSeriesItem
+
+export interface GraphData {
+  downtime: GraphDowntime[]
+  series: GraphSeries[]
+  startTime: number
+  endTime: number
+}
+
 // MARK: PLAYER
 
-export interface ReportPlayersRoles{
-
+export interface ReportPlayersRoles {
   tanks: PlayerDetails[]
   healers: PlayerDetails[]
   dps: PlayerDetails[]
-
 }
 
-export interface PlayerDetails{
+export interface PlayerDetails {
   name: string
   id: number
   guid: number

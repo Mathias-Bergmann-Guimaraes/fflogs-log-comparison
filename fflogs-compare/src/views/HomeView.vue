@@ -48,7 +48,7 @@ const resetMinutes = computed(() => {
   return Math.ceil(store.quota.pointsResetIn / 60)
 })
 
-async function handleSelectedJob(playerSubType: string, code: string) {
+async function handleSelectedJob(playerSubType: string, code: string, playerID: number) {
   loadingTopPlayers.value = true
   try {
     const data = await store.fetchTopPlayers(playerSubType, code)
@@ -59,5 +59,6 @@ async function handleSelectedJob(playerSubType: string, code: string) {
   } finally {
     loadingTopPlayers.value = false
   }
+  store.saveSelectedPlayer(code, playerID)
 }
 </script>

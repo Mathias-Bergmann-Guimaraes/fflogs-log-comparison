@@ -17,6 +17,7 @@ import type {
   TopPlayerReport,
   ReportPlayersRoles,
   ReportPlayersDetails,
+  GraphData,
 } from '@/types/fflogs'
 import { toNum } from '../types/typesUtils'
 
@@ -25,13 +26,14 @@ export const useFFLogsStore = defineStore('fflogs', () => {
   const token = ref<string | null>(null)
 
   // Keyed by report code to avoid re-fetching the same report across navigations
-  const reports = ref<Record<string, ReportMeta>>({})
+  const reportMetadata = ref<Record<string, ReportMeta>>({})
   const reportPlayers = ref<Record<string, ReportPlayers>>({})
   const fightEvents = ref<Record<string, ReportFightEvents>>({})
   const topPlayers = ref<Record<string, TopPlayerDto[]>>({})
   // const topPlayersReport = ref<>()
   const playerSummary = ref<Record<string, ReportPlayerSummary>>({})
   const playerSmallSummary = ref<Record<string, PlayerSummary>>({})
+  const selectedPlayerGraphData = ref<Record<number, number[]>>()
 
   // Players who participated in the selected fights, with LimitBreak filtered out
   const lastReportPlayers = ref<Actor[]>([])
@@ -47,6 +49,30 @@ export const useFFLogsStore = defineStore('fflogs', () => {
   async function ensureToken() {
     if (!token.value) {
       token.value = await getToken()
+    }
+  }
+
+  async function saveSelectedPlayer(code: string, playerID: number) {
+    const fightID = reportMetadata.value[code]?.fights[0]?.id ?? 0
+    const fightEndTime = reportMetadata.value[code]?.fights[0]?.endTime ?? 0
+    const phases = reportMetadata.value[code]?.fights[0]?.phaseTransitions ?? []
+    for (let i = 1; i < phases.length + 1; i++) {
+      const phase = phases[i - 1]
+      if (!phase) return
+
+      const startTime = phases[i - 1]?.startTime ?? 0
+      const endTime = i === phases.length ? fightEndTime : (phases[i]?.startTime ?? 0)
+
+      console.log(startTime, endTime)
+
+      const data = await fetchPlayerGraph(code, [fightID], playerID, startTime, endTime)
+      const totalGraph = data?.series?.find((graph) => graph.name === 'Total')
+
+      if (!selectedPlayerGraphData.value) {
+        selectedPlayerGraphData.value = {}
+      }
+
+      selectedPlayerGraphData.value[phase.id] = totalGraph?.data ?? []
     }
   }
 
@@ -70,7 +96,7 @@ export const useFFLogsStore = defineStore('fflogs', () => {
    * Fetches sumary data of a Single Player like rDPS, aDPS, nDPS, cDPS
    */
   async function fetchPlayerSumary(code: string, fightIDs: number[], playerID: number, fightStartTime: number, fightEndTime: number) {
-    if (!reports.value[code]) {
+    if (!reportMetadata.value[code]) {
       fetchReport(code, fightIDs)
     }
 
@@ -109,7 +135,7 @@ export const useFFLogsStore = defineStore('fflogs', () => {
 
       quota.value = rateLimitData.rateLimitData
       returnData = reportData.reportData.report
-      reports.value[code] = returnData
+      reportMetadata.value[code] = returnData
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : 'Unknown error'
     } finally {
@@ -150,14 +176,14 @@ export const useFFLogsStore = defineStore('fflogs', () => {
   }
 
   async function fetchTopPlayers(job: string, code: string): Promise<TopPlayerDto[]> {
-    const encounterID = reports.value[code]?.fights[0]?.encounterID
+    const encounterID = reportMetadata.value[code]?.fights[0]?.encounterID
     if (!encounterID) {
       error.value = 'no fight'
       return []
     }
     const data = await ql.fetchTopPlayers(token.value!, { specName: job, encounterID })
 
-    const topRankings = (data.worldData.encounter.characterRankings as CharacterRankings).rankings?.splice(0, maxPlayerToCompare.value)
+    const topRankings = (data.worldData.encounter.characterRankings as CharacterRankings).rankings?.splice(0, maxPlayerToCompare.value) ?? []
     const chads = topRankings.map((ranking) => ({
       name: ranking.name,
       spec: ranking.spec,
@@ -173,6 +199,26 @@ export const useFFLogsStore = defineStore('fflogs', () => {
     const data = await ql.fetchPlayerDetails(token.value!, { fightIDs, code })
     const typedData = data.reportData.report.playerDetails as ReportPlayersDetails
     return typedData.data.playerDetails
+  }
+
+  /**
+   * Fetches sumary data of a Single Player like rDPS, aDPS, nDPS, cDPS
+   */
+  async function fetchPlayerGraph(code: string, fightIDs: number[], playerID: number, fightStartTime: number, fightEndTime: number) {
+    await ensureToken()
+
+    if (!fightEndTime || !fightStartTime) {
+      return
+    }
+
+    const [rateLimitData, data] = await Promise.all([
+      ql.fetchRateLimitData(token.value!),
+      ql.fetchPlayerGraph(token.value!, { code, fightIDs, startTime: fightStartTime, endTime: fightEndTime, sourceID: playerID }),
+    ])
+
+    quota.value = rateLimitData.rateLimitData
+    const graphData = (data.reportData.report.graph as { data: GraphData }).data
+    return graphData
   }
 
   // MARK: Helper functions
@@ -237,7 +283,7 @@ export const useFFLogsStore = defineStore('fflogs', () => {
 
   return {
     token,
-    reports,
+    reports: reportMetadata,
     loading,
     reportPlayers,
     lastReportPlayers,
@@ -245,12 +291,15 @@ export const useFFLogsStore = defineStore('fflogs', () => {
     playerSmallSummary,
     error,
     quota,
+    selectedPlayerGraphData,
     fetchReport,
     fetchPlayers,
     fetchPlayerSumary,
     curatePlayerSummary,
+    fetchPlayerGraph,
     fetchAllEvents,
     fetchTopPlayers,
     fetchPlayerDetails,
+    saveSelectedPlayer,
   }
 })

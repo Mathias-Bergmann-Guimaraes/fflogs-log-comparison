@@ -1,0 +1,7 @@
+query ReportPlayerGraph($code: String!, $fightIDs: [Int!]!, $startTime: Float!, $endTime: Float!, $sourceID: Int!) {
+  reportData {
+    report(code: $code) {
+      graph(fightIDs: $fightIDs, startTime: $startTime, endTime: $endTime, sourceID: $sourceID, dataType: DamageDone)
+    }
+  }
+}

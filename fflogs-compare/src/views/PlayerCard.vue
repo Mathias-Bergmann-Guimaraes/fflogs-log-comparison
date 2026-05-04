@@ -1,5 +1,5 @@
 <template>
-  <a-card style="cursor: pointer" @click="emit('select', props.playerSubType, props.playerName)">
+  <a-card style="cursor: pointer" @click="emit('select', props.playerSubType, props.playerName, props.playerID)">
     <a-card-meta :title="playerName">
       <template #avatar>
         <a-avatar :src="jobIconPath"></a-avatar>
@@ -20,13 +20,14 @@ import { computed } from 'vue'
 
 const props = defineProps<{
   //TODO: remove player and use actual information needed like name/ subtype (job)
+  playerID: number
   playerName: string
   playerSubType: string
   playerSummaryData: PlayerSummary
 }>()
 
 const emit = defineEmits<{
-  (e: 'select', playerSubType: string, playerName: string): void
+  (e: 'select', playerSubType: string, playerName: string, playerID: number): void
 }>()
 
 function percentage(num: number): string {

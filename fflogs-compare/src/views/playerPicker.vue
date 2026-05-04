@@ -15,6 +15,7 @@
       <div v-for="player in playersDetails?.tanks" :key="player.id" class="p-1">
         <player-card
           v-if="playerSummaries[player.id]"
+          :player-i-d="player.id"
           :player-name="player.name"
           :player-sub-type="player.type"
           :player-summary-data="playerSummaries[player.id]!"
@@ -25,6 +26,7 @@
       <div v-for="player in playersDetails?.healers" :key="player.id" class="p-1">
         <player-card
           v-if="playerSummaries[player.id]"
+          :player-i-d="player.id"
           :player-name="player.name"
           :player-sub-type="player.type"
           :player-summary-data="playerSummaries[player.id]!"
@@ -37,6 +39,7 @@
       <div v-for="player in playersDetails?.dps" :key="player.id" class="p-1">
         <player-card
           v-if="playerSummaries[player.id]"
+          :player-i-d="player.id"
           :player-name="player.name"
           :player-sub-type="player.type"
           :player-summary-data="playerSummaries[player.id]!"
@@ -50,6 +53,7 @@
     <div v-for="player in store.lastReportPlayers" :key="player.id" class="p-1 w-1/2">
       <player-card
         v-if="store.playerSmallSummary[player.id]"
+        :player-i-d="player.id"
         :player-name="player.name"
         :player-sub-type="player.subType"
         :player-summary-data="store.playerSmallSummary[player.id]!"
@@ -67,7 +71,7 @@ import { parseReportURL } from '@/stores/fflogsUtils'
 import { type PlayerSummary, type ReportPlayersRoles, type ReportURL } from '@/types/fflogs'
 
 const emit = defineEmits<{
-  (e: 'selected', playerSubType: string, code: string): void
+  (e: 'selected', playerSubType: string, code: string, playerID: number): void
 }>()
 
 const store = useFFLogsStore()
@@ -76,8 +80,8 @@ const reportURL = computed(() => parseReportURL(url.value))
 const playersDetails = ref<ReportPlayersRoles>()
 const playerSummaries = ref<Record<number, PlayerSummary | undefined>>({})
 
-function handlePlayerSelect(playerSubType: string) {
-  emit('selected', playerSubType, reportURL.value.code)
+function handlePlayerSelect(playerSubType: string, _: string, playerID: number) {
+  emit('selected', playerSubType, reportURL.value.code, playerID)
 }
 
 async function fetchReportInformation(report: ReportURL) {
