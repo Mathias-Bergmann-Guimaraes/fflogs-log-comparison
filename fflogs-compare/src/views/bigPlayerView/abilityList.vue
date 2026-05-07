@@ -1,21 +1,17 @@
 <template>
   <div>
     <h1>Ability List</h1>
-    <a-row v-for="ability in sortedAbilities" :key="ability.guid">
-      <a-col :span="8" class="pr-2">{{ ability.name }}</a-col>
-      <a-col :span="13">
-        <a-progress
-          class="max-w-[90%]"
-          :percent="dpsPrecentage(toNum(ability.totalRDPS))"
-          :success="{
-            percent: calculateCritDifference(ability.hitdetails, ability.multistrikedetails, ability.total, toNum(ability.totalRDPS)),
-          }"
-          status="normal"
-          :format="() => `${calcDps(toNum(ability.totalRDPS)).toFixed(2)}`"
-        />
-      </a-col>
-      <a-col :span="1">{{ calculateTotalHitCount(ability.hitdetails, ability.multistrikedetails) }}</a-col>
-    </a-row>
+    <div v-for="ability in sortedTopPlayerAbilities" :key="ability.guid">
+      <ability-list-entry-item
+        v-if="getAbility(ability.guid)"
+        :ability="getAbility(ability.guid)!"
+        :combat-time="props.combatTime"
+        :highest-rdps="toNum(sortedAbilities[0]?.totalRDPS ?? 0)"
+        :top-player-abilities="ability"
+        :top-player-combat-time="props.topPlayerCombatTime"
+        :top-player-highest-dps="toNum(sortedTopPlayerAbilities[0]?.totalRDPS ?? 0)"
+      />
+    </div>
   </div>
 </template>
 
@@ -23,18 +19,27 @@
 import type { HitDetail, TableEntry } from '@/types/fflogs'
 import { toNum } from '@/types/typesUtils'
 import { computed } from 'vue'
+import AbilityListEntryItem from './AbilityListEntryItem.vue'
 
 const props = defineProps<{
   abilitys: TableEntry[]
   combatTime: number
+
+  topPlayerAbilities: TableEntry[]
+  topPlayerCombatTime: number
 }>()
 
 const sortedAbilities = computed(() => [...props.abilitys].sort((a, b) => toNum(b.totalRDPS) - toNum(a.totalRDPS)))
+const sortedTopPlayerAbilities = computed(() => [...props.topPlayerAbilities].sort((a, b) => toNum(b.totalRDPS) - toNum(a.totalRDPS)))
 const topRDps = computed(() => {
   const top = sortedAbilities.value[0]
   if (!top) return 0
   return (toNum(top.totalRDPS) / props.combatTime) * 1000
 })
+
+function getAbility(guid: number) {
+  return sortedAbilities.value.find((playerAbility) => playerAbility.guid === guid)
+}
 
 function calculateCritDifference(hitdetails: HitDetail[] | undefined, directHitDetails: HitDetail[] | undefined, totalDamage = 0, totalRDPS = 0) {
   if (totalDamage === 0) {

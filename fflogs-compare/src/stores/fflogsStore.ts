@@ -34,6 +34,8 @@ export const useFFLogsStore = defineStore('fflogs', () => {
   const playerSummary = ref<Record<string, ReportPlayerSummary>>({})
   const playerSmallSummary = ref<Record<string, PlayerSummary>>({})
   const selectedPlayerGraphData = ref<Record<number, number[]>>()
+  const selectedPlayerTableData = ref<Record<number, TableData>>()
+  const selectedPlayerPhaseCombatTime = ref<Record<number, number>>({})
 
   // Players who participated in the selected fights, with LimitBreak filtered out
   const lastReportPlayers = ref<Actor[]>([])
@@ -49,6 +51,37 @@ export const useFFLogsStore = defineStore('fflogs', () => {
   async function ensureToken() {
     if (!token.value) {
       token.value = await getToken()
+    }
+  }
+
+  async function getSelectedPlayerTableDataByPhase(code: string, playerID: number) {
+    const fightID = reportMetadata.value[code]?.fights[0]?.id ?? 0
+    const fightEndTime = reportMetadata.value[code]?.fights[0]?.endTime ?? 0
+    const phases = reportMetadata.value[code]?.fights[0]?.phaseTransitions ?? []
+    for (let i = 1; i < phases.length + 1; i++) {
+      const phase = phases[i - 1]
+      if (!phase) return
+
+      const startTime = phases[i - 1]?.startTime ?? 0
+      const endTime = i === phases.length ? fightEndTime : (phases[i]?.startTime ?? 0)
+
+      console.log(startTime, endTime)
+
+      const data = await fetchPlayerSumary(code, [fightID], playerID, startTime, endTime)
+
+      if (!data?.damageDowntime && data?.combatTime) {
+        selectedPlayerPhaseCombatTime.value[i] = data?.combatTime
+      }
+      if (data?.combatTime && data?.damageDowntime) selectedPlayerPhaseCombatTime.value[i] = data?.combatTime - data?.damageDowntime
+
+      if (!selectedPlayerTableData.value) {
+        selectedPlayerTableData.value = {}
+      }
+      if (!data) {
+        return
+      }
+
+      selectedPlayerTableData.value[phase.id] = data
     }
   }
 
@@ -74,6 +107,7 @@ export const useFFLogsStore = defineStore('fflogs', () => {
 
       selectedPlayerGraphData.value[phase.id] = totalGraph?.data ?? []
     }
+    getSelectedPlayerTableDataByPhase(code, playerID)
   }
 
   // MARK: Querries
@@ -292,6 +326,8 @@ export const useFFLogsStore = defineStore('fflogs', () => {
     error,
     quota,
     selectedPlayerGraphData,
+    selectedPlayerTableData,
+    selectedPlayerPhaseCombatTime,
     fetchReport,
     fetchPlayers,
     fetchPlayerSumary,

@@ -32,7 +32,12 @@
             <!-- ABILITY SUMMARY -->
             <div class="px-0.5 w-full max-h-full overflow-y-auto">
               <!-- ABILITY LIST -->
-              <ability-list :abilitys="tableEntries[phase.id] ?? []" :combat-time="combatTime" />
+              <ability-list
+                :abilitys="selectedPlayerTableData[phase.id]?.entries ?? []"
+                :combat-time="selectedPlayerCombatTime[phase.id] ?? 0"
+                :top-player-abilities="topPlayerTableEntries[phase.id] ?? []"
+                :top-player-combat-time="topPlayerCombatTime[phase.id] ?? 0"
+              />
             </div>
             <div class="px-0.5 w-full h-full">
               <!-- DISCREPENCY LIST -->
@@ -46,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import type { PhaseDto, PlayerSummary, TableEntry } from '@/types/fflogs'
+import type { PhaseDto, PlayerSummary, TableData, TableEntry } from '@/types/fflogs'
 import { computed, onMounted, ref } from 'vue'
 import AbilityList from './bigPlayerView/abilityList.vue'
 import { useFFLogsStore } from '@/stores/fflogsStore'
@@ -70,32 +75,39 @@ const emit = defineEmits<{
   (e: 'select', playerSubType: string): void
 }>()
 
-const tableEntries = ref<Record<number, TableEntry[]>>({})
+const topPlayerTableEntries = ref<Record<number, TableEntry[]>>({})
+const topPlayerCombatTime = ref<Record<number, number>>({})
+const selectedPlayerTableData = ref<Record<number, TableData>>(store.selectedPlayerTableData ?? {})
+const selectedPlayerCombatTime = ref<Record<number, number>>(store.selectedPlayerPhaseCombatTime ?? 0)
+
 const graphData = ref<Record<number, number[]>>({})
 const selectedPlayerGraphData = ref<Record<number, number[]>>(store.selectedPlayerGraphData ?? {})
-const combatTime = ref<number>(0)
 
 async function setupAbilityList() {
-  props.phases.forEach(async (phase) => {
-    const phaseID = phase.id
-    const { startTime, endTime } = phasePeriod(phaseID)
-    const data = await store.fetchPlayerSumary(props.code, [props.fightID], props.playerID, startTime ?? 0, endTime ?? 0)
-    tableEntries.value[phaseID] = data?.entries ?? []
-    if (!data?.damageDowntime && data?.combatTime) {
-      combatTime.value = data?.combatTime
-    }
-    if (data?.combatTime && data?.damageDowntime) combatTime.value = data?.combatTime - data?.damageDowntime
-  })
+  await Promise.all(
+    props.phases.map(async (phase) => {
+      const phaseID = phase.id
+      const { startTime, endTime } = phasePeriod(phaseID)
+      const data = await store.fetchPlayerSumary(props.code, [props.fightID], props.playerID, startTime ?? 0, endTime ?? 0)
+      topPlayerTableEntries.value[phaseID] = data?.entries ?? []
+      if (!data?.damageDowntime && data?.combatTime) {
+        topPlayerCombatTime.value[phaseID] = data?.combatTime
+      }
+      if (data?.combatTime && data?.damageDowntime) topPlayerCombatTime.value[phaseID] = data?.combatTime - data?.damageDowntime
+    }),
+  )
 }
 
 async function setupPhaseGraph() {
-  props.phases.forEach(async (phase) => {
-    const phaseID = phase.id
-    const { startTime, endTime } = phasePeriod(phaseID)
-    const data = await store.fetchPlayerGraph(props.code, [props.fightID], props.playerID, startTime, endTime)
-    const totalGraph = data?.series.filter((graph) => graph.name === 'Total')[0]
-    graphData.value[phaseID] = totalGraph?.data ?? []
-  })
+  await Promise.all(
+    props.phases.map(async (phase) => {
+      const phaseID = phase.id
+      const { startTime, endTime } = phasePeriod(phaseID)
+      const data = await store.fetchPlayerGraph(props.code, [props.fightID], props.playerID, startTime, endTime)
+      const totalGraph = data?.series.filter((graph) => graph.name === 'Total')[0]
+      graphData.value[phaseID] = totalGraph?.data ?? []
+    }),
+  )
 }
 
 const phasePeriod = (phase: number) => {
