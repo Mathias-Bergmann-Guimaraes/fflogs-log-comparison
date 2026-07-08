@@ -33,13 +33,13 @@ export interface ReportURL {
   fightIDs: number[]
 }
 
-export interface reportEvent {
+export interface ReportEvent {
   timestamp: number
   type: 'damage' | 'calculatingdamage' // calculateddamage = snapshot, damage = when it lands
   packetID: number
   sourceID: number // actor ID of who dealt it
   targertID: number // actor ID of who received it
-  abilityGameID: number // the ability used
+  ability: Ability // the ability used
   fight: number // fight ID
   hitType: 1 | 2 // 1 = normal, 2 = crit
   amount: number // actual damage dealt
@@ -49,6 +49,47 @@ export interface reportEvent {
   bonusPercent?: number // direct hit bonus %
   buffs?: string // dot-separated list of active buff IDs e.g. "1000049.1000851."
   tick?: boolean // true = DoT tick
+}
+
+export interface Ability {
+  name: string
+  guid: number
+  type: number
+  abilityIcon: string
+}
+
+export interface AbilityEvent {
+  abilityID: number
+  event: ReportEvent[]
+  baseDamageToCritDHRatio: number
+  totalOne?: number // either first target or second depends on wich is preocessed first
+  totalTwo?: number
+  isOneFirstTargert?: boolean
+  totalCritDHOne?: number
+  totalCritDHTwo?: number
+  isCritDHOneFirstTargert?: boolean
+  count: number
+  name: string
+}
+
+export interface AbilityEventDto {
+  abilityID: number
+  event: ReportEvent[]
+  baseDamageToCritDHRatio: number
+  totalOne?: number // either first target or second depends on wich is preocessed first
+  totalTwo?: number
+  isOneFirstTargert?: boolean
+  totalCritOne?: number
+  totalCritTwo?: number
+  isCritOneFirstTargert?: boolean
+  totalDHOne?: number
+  totalDHTwo?: number
+  isDHOneFirstTargert?: boolean
+  totalCritDHOne?: number
+  totalCritDHTwo?: number
+  isCritDHOneFirstTargert?: boolean
+  count: number
+  name: string
 }
 
 export interface TableBuff {
@@ -97,6 +138,13 @@ export interface TableEntry {
   hitdetails: HitDetail[]
   multistrikedetails: HitDetail[]
   missdetails: HitDetail[]
+  targets: TargetDetail[]
+}
+
+export interface TargetDetail {
+  name: string
+  total: number
+  type: string | 'Boss'
 }
 
 export interface TableData {

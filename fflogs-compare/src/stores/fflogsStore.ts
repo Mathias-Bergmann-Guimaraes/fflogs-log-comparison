@@ -18,8 +18,11 @@ import type {
   ReportPlayersRoles,
   ReportPlayersDetails,
   GraphData,
+  ReportEvent,
+  AbilityEvent,
 } from '@/types/fflogs'
 import { toNum } from '../types/typesUtils'
+import AbilityList from '@/views/bigPlayerView/abilityList.vue'
 
 export const useFFLogsStore = defineStore('fflogs', () => {
   // Cached OAuth token — fetched once on first API call, reused for all subsequent calls
@@ -110,20 +113,80 @@ export const useFFLogsStore = defineStore('fflogs', () => {
     getSelectedPlayerTableDataByPhase(code, playerID)
   }
 
+  // MARK: V2
+
+  function parseAllEvents(allEvents: ReportEvent[]) {
+    const eventsByAbility = new Map<number, AbilityEvent>()
+
+    for (const event of allEvents) {
+      // all abilities are doubled with damage calculated (snapshot) and damage (actual damage dealt)
+      // here we will focus only on damageCalculated
+      if (event.type !== 'calculatingdamage') {
+        continue
+      }
+
+      // checks if the ability is already stored
+      const abilityID = event.ability.guid
+      const storedAbility = eventsByAbility.get(abilityID)
+
+      if (storedAbility) {
+        // check if it is first or second target by checking for how much % ist deviates from the stored damage
+        // or if it is closer to either
+
+        if (eventsByAbility.get(abilityID)?.totalOne){
+          
+        }
+
+        // ===========
+        // do stuff
+        // ======
+        // calculate ratio between {first target, second target} Base and {Crit, DH, cirect Crit}
+      } else {
+        const normalizedDamage = normalizeDamage(event.amount, event.multiplier)
+
+        // stores ability
+        eventsByAbility.set(abilityID, {
+          abilityID,
+          event: [event],
+          count: 1,
+          name: event.ability.name,
+          // whether to populate crit or base
+          ...(event.hitType === 1
+            ? { totalOne: normalizedDamage, baseDamageToCritDHRatio: -1 }
+            : { totalCritDHOne: normalizedDamage, baseDamageToCritDHRatio: -1 }),
+        })
+      }
+    }
+  }
+
+  function normalizeDamage(amount: number, multiplier: number) {
+    return amount / multiplier
+  }
+
+  function getDamageAverage(totalDamage: number, count: number) {
+    return totalDamage / count
+  }
+
   // MARK: Querries
 
   // FFLogs paginates events via nextPageTimestamp — this loops until all pages are collected.
   // startTime advances each iteration to the timestamp where the previous page ended.
   async function fetchAllEvents(code: string, fightIDs: number[] = [], startTime: number | undefined, endTime: number | undefined) {
-    const allEvents: unknown[] = []
+    const allEvents: ReportEvent[] = []
     if (!startTime || !endTime) {
       error.value = 'startTime or EndTime is invalid'
-      // console.error({startTime: startTime, endTime: endTime})
       return
     }
+    let queryStartTime = startTime
 
-    const data = await ql.fetchReportFightEvents(token.value!, { code, fightIDs, startTime, endTime })
-    return data
+    while (!queryStartTime) {
+      const data = await ql.fetchReportFightEvents(token.value!, { code, fightIDs, startTime: queryStartTime, endTime })
+      const parsedData = data.reportData.report.events.data as ReportEvent
+      allEvents.concat(parsedData)
+      queryStartTime = data.reportData.report.events.nextPageTimestamp
+    }
+
+    return allEvents
   }
 
   /**

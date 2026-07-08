@@ -50,6 +50,12 @@ const abilityBaseDamageRatio = computed(() => {
     return 1
   }
 
+  // check if there is more then one target
+  // TODO: actualy differentiate first and second hit
+  if (props.ability.targets.length > 1) {
+    return 1
+  }
+
   const normalHitAvg = normalHit.total / normalHit.count
   const critBaseDamage = critHit ? normalHitAvg * critHit.count : 0
   const directHitBaseDamage = directHit ? normalHitAvg * directHit.count : 0
