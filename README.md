@@ -92,8 +92,8 @@ fflogs-compare/
 │  ├─ types/fflogs.ts        # flattens nested codegen types into reusable aliases
 │  ├─ constants/            # per-job damage constants (e.g. RDM drop-off)
 │  ├─ assets/               # job icon PNGs + jobIcons.ts lookup, main.css
-│  ├─ router/index.ts        # / → HomeView (landing), /compare → CompareView
-│  └─ views/                 # CompareView → PlayerPicker / TopPlayers → PlayerCard / BigPlayerCard
+│  ├─ router/index.ts        # / → HomeView (landing), /compare → fflogsComparison/CompareView
+│  └─ views/                 # HomeView (landing); fflogsComparison/: CompareView → PlayerPicker / TopPlayers → PlayerCard / BigPlayerCard
 └─ .env                      # FF Logs credentials (gitignored)
 ```
 
@@ -134,14 +134,14 @@ downtime, and `curatePlayerSummary` turns raw table data into the numbers the ca
 ### Rate limits
 
 FF Logs bills queries in **points per hour**. `rateLimitData` is queried alongside normal requests
-and surfaced as a progress bar in [`CompareView.vue`](fflogs-compare/src/views/CompareView.vue) with a
+and surfaced as a progress bar in [`CompareView.vue`](fflogs-compare/src/views/fflogsComparison/CompareView.vue) with a
 reset countdown. Worth watching while developing — paginating events over a long fight is
 expensive, and hitting the ceiling makes the app look broken until the hour rolls over.
 
 ## Gotchas
 
 - **The report input needs a full URL, not a bare code.** The placeholder text in
-  [`PlayerPicker.vue`](fflogs-compare/src/views/PlayerPicker.vue) says "paste report code", but
+  [`PlayerPicker.vue`](fflogs-compare/src/views/fflogsComparison/PlayerPicker.vue) says "paste report code", but
   [`parseReportURL`](fflogs-compare/src/stores/fflogsUtils.ts) runs `new URL(input)` and returns
   `{ code: "0", fightIDs: [] }` when that throws. Paste the whole
   `https://www.fflogs.com/reports/<code>?fight=1` URL; the `fight` param accepts `.`-separated IDs.
@@ -151,7 +151,7 @@ expensive, and hitting the ceiling makes the app look broken until the hour roll
 - **Routing is shallow.** [`router/index.ts`](fflogs-compare/src/router/index.ts) has a landing page
   at `/` and the comparison page at `/compare`; navigation *within* the comparison (report → player →
   top players) is still component state inside `CompareView`, so it's lost on reload.
-- **Leftovers.** `src/views/junk` and `src/views/junk2` are extensionless scratch files, and
+- **Leftovers.** `src/views/fflogsComparison/junk` and `junk2` are extensionless scratch files, and
   `src/stores/counter.ts` is the unused store from the Vue template. Nothing imports any of them.
 
 ## Editor setup

@@ -1,5 +1,5 @@
 <template>
-  <div style="padding: 2rem">
+  <div style="padding: 2rem" class="min-h-screen">
     <router-link :to="{ name: 'home' }" class="inline-block mb-4 text-sm text-gray-400 hover:text-gray-100">&larr; Home</router-link>
     <player-picker @selected="handleSelectedJob"></player-picker>
 

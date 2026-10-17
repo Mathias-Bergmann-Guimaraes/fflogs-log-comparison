@@ -1,11 +1,29 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
+import HomeViewLayout from '@/views/HomeViewLayout.vue'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    menuLabel?: string
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', name: 'home', component: HomeView },
-    { path: '/compare', name: 'compare', component: () => import('@/views/CompareView.vue') },
+    {
+      path: '/',
+      component: HomeViewLayout,
+      children: [
+        { path: '', name: 'home', component: HomeView, meta: { menuLabel: 'Home' } },
+        {
+          path: 'compare',
+          name: 'compare',
+          component: () => import('@/views/fflogsComparison/CompareView.vue'),
+          meta: { menuLabel: 'Logs Comparison' },
+        },
+      ],
+    },
     { path: '/:pathMatch(.*)*', redirect: { name: 'home' } },
   ],
 })

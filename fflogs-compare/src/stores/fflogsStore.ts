@@ -22,7 +22,7 @@ import type {
   AbilityEvent,
 } from '@/types/fflogs'
 import { toNum } from '../types/typesUtils'
-import AbilityList from '@/views/bigPlayerView/abilityList.vue'
+import AbilityList from '@/views/fflogsComparison/bigPlayerView/abilityList.vue'
 
 export const useFFLogsStore = defineStore('fflogs', () => {
   // Cached OAuth token — fetched once on first API call, reused for all subsequent calls
@@ -133,8 +133,7 @@ export const useFFLogsStore = defineStore('fflogs', () => {
         // check if it is first or second target by checking for how much % ist deviates from the stored damage
         // or if it is closer to either
 
-        if (eventsByAbility.get(abilityID)?.totalOne){
-          
+        if (eventsByAbility.get(abilityID)?.totalOne) {
         }
 
         // ===========
