@@ -43,3 +43,5 @@ __screenshots__/
 
 # GraphQL codegen
 src/api/__generated__/
+# SQLite database (server/db.ts)
+data/

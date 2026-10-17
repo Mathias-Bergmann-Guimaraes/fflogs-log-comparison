@@ -12,6 +12,10 @@ export default defineConfig({
     vueDevTools(),
     tailwindcss(),
   ],
+  server: {
+    // API server from server/index.ts (npm run dev starts both)
+    proxy: { '/api': 'http://localhost:3000' },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

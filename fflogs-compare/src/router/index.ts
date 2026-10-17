@@ -1,10 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
 import HomeViewLayout from '@/views/HomeViewLayout.vue'
+import { useAuthStore } from '@/stores/authStore'
 
 declare module 'vue-router' {
   interface RouteMeta {
     menuLabel?: string
+    requiresAuth?: boolean
   }
 }
 
@@ -26,12 +28,24 @@ const router = createRouter({
           path: 'bisTracker',
           name: 'bisTracker',
           component: () => import('@/views/bis-tracker/BisTrackerView.vue'),
-          meta: { menuLabel: 'BiS Tracker' },
+          meta: { menuLabel: 'BiS Tracker', requiresAuth: true },
+        },
+        {
+          path: 'login',
+          name: 'login',
+          component: () => import('@/views/LoginView.vue'),
         },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: { name: 'home' } },
   ],
+})
+
+router.beforeEach(async (to) => {
+  if (!to.meta.requiresAuth) return
+  const auth = useAuthStore()
+  await auth.ensureLoaded()
+  if (!auth.user) return { name: 'login', query: { redirect: to.fullPath } }
 })
 
 export default router

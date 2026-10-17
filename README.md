@@ -5,8 +5,9 @@ URL, pick a player from the fight, and compare them against the world's top-rank
 same job on the same encounter — DPS breakdowns (rDPS/aDPS/nDPS/cDPS), crit and direct-hit rates,
 per-phase tables, and damage-over-time graphs.
 
-The app is a pure client-side SPA. It talks straight to the FF Logs v2 GraphQL API; there is no
-backend of our own.
+The log comparison talks straight to the FF Logs v2 GraphQL API from the browser. A small API
+server in [`fflogs-compare/server/`](fflogs-compare/server) (Hono + SQLite) handles user accounts
+and stores each user's BiS tracker progress.
 
 ## Quick start
 
@@ -19,11 +20,13 @@ npm run codegen   # generates GraphQL types — needs .env, see below
 npm run dev
 ```
 
-Vite prints the local URL (default <http://localhost:5173>).
+`npm run dev` starts both Vite (default <http://localhost:5173>) and the API server on port 3000;
+Vite proxies `/api` to it.
 
 ### Requirements
 
-- **Node** `^20.19.0 || >=22.12.0` (enforced by `engines` in `package.json`)
+- **Node** `>=22.12.0` (enforced by `engines` in `package.json`). The server uses Node's built-in
+  `node:sqlite`, which doesn't exist on Node 20.
 - **FF Logs API client credentials** — create a v2 client at
   <https://www.fflogs.com/api/clients/>, then put them in `fflogs-compare/.env`:
 
@@ -33,6 +36,23 @@ Vite prints the local URL (default <http://localhost:5173>).
   ```
 
   `.env` is gitignored, so every clone needs its own.
+
+- **Google login (optional)**: without these vars the "Continue with Google" button is hidden and
+  username/password login still works. Create an OAuth client in Google Cloud Console (APIs &
+  Services → Credentials → *Web application*), add
+  `http://localhost:5173/api/auth/google/callback` (and your production URL's equivalent) as an
+  authorised redirect URI, then add to the same `.env`:
+
+  ```ini
+  GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+  GOOGLE_CLIENT_SECRET=...
+  # Public origin the browser uses; defaults to http://localhost:5173 (Vite in dev)
+  APP_URL=https://yourdomain
+  ```
+
+  These have no `VITE_` prefix, so they're read only by the server and never bundled into the
+  frontend. Set the OAuth consent screen to *In production*: in *Testing* only manually added test
+  users can log in.
 
 > [!IMPORTANT]
 > `npm run codegen` is **not** optional on a fresh clone. The generated file
@@ -46,14 +66,32 @@ Run all of these from `fflogs-compare/`.
 
 | Script | What it does |
 | --- | --- |
-| `npm run dev` | Vite dev server with HMR + Vue DevTools |
+| `npm run dev` | Vite dev server (HMR + Vue DevTools) and the API server in watch mode |
 | `npm run codegen` | Regenerates `src/api/__generated__/graphql.ts` from the live schema |
 | `npm run build` | Type-check and production build (parallel, via `npm-run-all2`) |
 | `npm run build-only` | Production build, skipping type-check |
 | `npm run type-check` | `vue-tsc --build` |
 | `npm run lint` | `oxlint --fix` then `eslint --fix` |
 | `npm run format` | Prettier over `src/` |
-| `npm run preview` | Serves the built `dist/` locally |
+| `npm run preview` | Serves the built `dist/` locally (no API, so login won't work) |
+| `npm start` | Production server: API plus the built `dist/`, one process |
+
+## Deploying
+
+```sh
+cd fflogs-compare
+npm ci
+npm run codegen && npm run build
+NODE_ENV=production PORT=3000 DB_PATH=/var/lib/ffxiv-companion/app.db npm start
+```
+
+- `DB_PATH` defaults to `./data/app.db` (gitignored). That one file is all the user data, so back it
+  up (with WAL mode, copy it while the server is stopped, or use `sqlite3 app.db ".backup out.db"`).
+- With `NODE_ENV=production` the session cookie is `Secure`, so serve over HTTPS (for example
+  behind Caddy or nginx). Logins over plain HTTP won't stick.
+- Run it under systemd, pm2, or similar so it restarts on crash and reboot.
+- Set `APP_URL` to the public HTTPS origin, or Google will reject the redirect URI.
+- `.env`'s FF Logs secret is still bundled into the frontend at build time; see Gotchas.
 
 ## Stack
 
