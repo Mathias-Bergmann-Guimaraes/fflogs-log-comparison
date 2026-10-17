@@ -1,14 +1,14 @@
 <template>
-  <a-layout class="min-h-screen">
+  <a-layout class="h-screen">
     <a-layout-header>FFXIV COMPANION</a-layout-header>
     <a-layout>
       <a-layout-sider>
-        <a-menu :selected-keys="[String(route.name)]" @click="onMenuClick">
+        <a-menu class="h-full" :selected-keys="[String(route.name)]" @click="onMenuClick">
           <a-menu-item v-for="item in menuItems" :key="item.name">{{ item.meta.menuLabel }}</a-menu-item>
         </a-menu>
       </a-layout-sider>
 
-      <a-layout-content>
+      <a-layout-content class="flex flex-col overflow-auto">
         <router-view />
       </a-layout-content>
     </a-layout>

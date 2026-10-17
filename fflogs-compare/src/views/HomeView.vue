@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+  <div class="flex-1 flex flex-col items-center justify-center px-6 py-16">
     <div class="max-w-3xl w-full text-center">
       <div class="flex flex-wrap justify-center gap-2 mb-8 opacity-80">
         <img v-for="job in jobs" :key="job" :src="`/job/${job}.png`" :alt="job" :title="job" class="w-8 h-8" />

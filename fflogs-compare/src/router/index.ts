@@ -22,6 +22,12 @@ const router = createRouter({
           component: () => import('@/views/fflogsComparison/CompareView.vue'),
           meta: { menuLabel: 'Logs Comparison' },
         },
+        {
+          path: 'bisTracker',
+          name: 'bisTracker',
+          component: () => import('@/views/bis-tracker/BisTrackerView.vue'),
+          meta: { menuLabel: 'BiS Tracker' },
+        },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: { name: 'home' } },
