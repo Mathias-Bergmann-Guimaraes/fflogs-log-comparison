@@ -1,64 +1,60 @@
 <template>
-  <div style="padding: 2rem">
-    <player-picker @selected="handleSelectedJob"></player-picker>
+  <div class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
+    <div class="max-w-3xl w-full text-center">
+      <div class="flex flex-wrap justify-center gap-2 mb-8 opacity-80">
+        <img v-for="job in jobs" :key="job" :src="`/job/${job}.png`" :alt="job" :title="job" class="w-8 h-8" />
+      </div>
 
-    <div v-if="loadingTopPlayers" style="margin-top: 2rem; display: flex; justify-content: center">
-      <a-spin size="large" tip="Loading top players..." />
+      <h1 class="text-4xl sm:text-5xl font-bold text-gray-100 mb-4">FF Logs Comparison</h1>
+      <p class="text-lg text-gray-400 mb-10">
+        Paste an FF Logs report, pick a player, and see how they stack up against the world's top-ranked players of the same job on the same
+        encounter.
+      </p>
+
+      <a-button type="primary" size="large" @click="router.push({ name: 'compare' })">Start comparing</a-button>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-16 text-left">
+        <div v-for="feature in features" :key="feature.title" class="rounded-lg border border-gray-700 bg-gray-800/60 p-5">
+          <h2 class="text-base font-semibold text-gray-100 mb-2">{{ feature.title }}</h2>
+          <p class="text-sm text-gray-400">{{ feature.text }}</p>
+        </div>
+      </div>
     </div>
-    <top-players v-else-if="isCompareJobSelected && selectedJobAndFight" :top-players="store.topPlayers[selectedJobAndFight] ?? []"></top-players>
-
-    <div v-if="store.quota" style="margin-top: 1rem" class="w-full flex flex-col">
-      <a-progress
-        :percent="quotaPercent"
-        :status="quotaStatus"
-        :format="() => `${store.quota!.pointsSpentThisHour} / ${store.quota!.limitPerHour} pts`"
-        class="max-w-[95%]"
-      />
-      <span style="font-size: 0.8rem; color: #888"> Resets in {{ resetMinutes }} min </span>
-    </div>
-
-    <a-alert v-if="store.error" type="error" :message="store.error" style="margin-top: 1rem" class="w-full" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useFFLogsStore } from '@/stores/fflogsStore'
-import PlayerPicker from './PlayerPicker.vue'
-import TopPlayers from './TopPlayers.vue'
+import { useRouter } from 'vue-router'
 
-const store = useFFLogsStore()
-const isCompareJobSelected = ref<boolean>(false)
-const selectedJobAndFight = ref<string>('')
-const loadingTopPlayers = ref(false)
+const router = useRouter()
 
-const quotaPercent = computed(() => {
-  if (!store.quota) return 0
-  return Math.round((store.quota.pointsSpentThisHour / store.quota.limitPerHour) * 100)
-})
+const jobs = [
+  'Paladin',
+  'Warrior',
+  'DarkKnight',
+  'Gunbreaker',
+  'WhiteMage',
+  'Scholar',
+  'Astrologian',
+  'Sage',
+  'Monk',
+  'Dragoon',
+  'Ninja',
+  'Samurai',
+  'Reaper',
+  'Viper',
+  'Bard',
+  'Machinist',
+  'Dancer',
+  'BlackMage',
+  'Summoner',
+  'RedMage',
+  'Pictomancer',
+]
 
-const quotaStatus = computed(() => {
-  if (quotaPercent.value >= 90) return 'exception'
-  if (quotaPercent.value >= 70) return 'normal'
-  return 'success'
-})
-
-const resetMinutes = computed(() => {
-  if (!store.quota) return 0
-  return Math.ceil(store.quota.pointsResetIn / 60)
-})
-
-async function handleSelectedJob(playerSubType: string, code: string, playerID: number) {
-  loadingTopPlayers.value = true
-  try {
-    const data = await store.fetchTopPlayers(playerSubType, code)
-    if (data) {
-      selectedJobAndFight.value = `${playerSubType}-${store.reports[code]?.fights[0]?.encounterID}`
-      isCompareJobSelected.value = true
-    }
-  } finally {
-    loadingTopPlayers.value = false
-  }
-  store.saveSelectedPlayer(code, playerID)
-}
+const features = [
+  { title: 'DPS breakdowns', text: 'rDPS, aDPS, nDPS and cDPS side by side, plus crit and direct-hit rates.' },
+  { title: 'Top-player benchmarks', text: 'Compare against the highest-ranked players of the same job on the same fight.' },
+  { title: 'Phases & graphs', text: 'Per-phase tables and damage-over-time charts to spot where the gap opens up.' },
+]
 </script>
