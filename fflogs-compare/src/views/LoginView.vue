@@ -18,7 +18,9 @@
         <a-form-item
           label="Password"
           name="password"
-          :rules="[{ required: true, min: mode === 'register' ? 8 : 1, message: mode === 'register' ? 'At least 8 characters' : 'Enter your password' }]"
+          :rules="[
+            { required: true, min: mode === 'register' ? 8 : 1, message: mode === 'register' ? 'At least 8 characters' : 'Enter your password' },
+          ]"
         >
           <a-input-password v-model:value="form.password" :autocomplete="mode === 'register' ? 'new-password' : 'current-password'" />
         </a-form-item>

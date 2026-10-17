@@ -64,7 +64,45 @@ const migrations: string[] = [
     PRIMARY KEY (provider, provider_user_id)
   );
   `,
+  // 3: linked gear sets. Jobs with the same group_id share BiS progress; unlinked jobs have no row.
+  // group_id is only meaningful per user.
+  `
+  CREATE TABLE job_links (
+    user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    job      TEXT NOT NULL,
+    group_id INTEGER NOT NULL,
+    PRIMARY KEY (user_id, job)
+  );
+  `,
+  // 4: linking per slot instead of per job. A slot's link group is (slot_index, group_id):
+  // jobs with the same pair share that slot. Existing job links become links on all slots.
+  `
+  CREATE TABLE slot_links (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    job        TEXT NOT NULL,
+    slot_index INTEGER NOT NULL,
+    group_id   INTEGER NOT NULL,
+    PRIMARY KEY (user_id, job, slot_index)
+  );
+  INSERT INTO slot_links (user_id, job, slot_index, group_id)
+    WITH RECURSIVE slot(i) AS (SELECT 0 UNION ALL SELECT i + 1 FROM slot WHERE i < 9)
+    SELECT l.user_id, l.job, slot.i, l.group_id FROM job_links l CROSS JOIN slot;
+  DROP TABLE job_links;
+  `,
 ]
+
+// node:sqlite has no transaction helper; synchronous fn only, so nothing else can interleave
+export function transaction<T>(fn: () => T): T {
+  db.exec('BEGIN')
+  try {
+    const result = fn()
+    db.exec('COMMIT')
+    return result
+  } catch (err) {
+    db.exec('ROLLBACK')
+    throw err
+  }
+}
 
 const { user_version: current } = db.prepare('PRAGMA user_version').get() as { user_version: number }
 

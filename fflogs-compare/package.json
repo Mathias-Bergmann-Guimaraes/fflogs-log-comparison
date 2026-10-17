@@ -19,6 +19,7 @@
     "start": "node --env-file-if-exists=.env --experimental-sqlite --experimental-strip-types server/index.ts"
   },
   "dependencies": {
+    "@ant-design/icons-vue": "^7.0.1",
     "@hono/node-server": "^2.1.5",
     "ant-design-vue": "^4.2.6",
     "echarts": "^6.0.0",

@@ -6,3 +6,8 @@ export const jobsByRole = [
   { role: 'Physical Ranged', jobs: ['Bard', 'Machinist', 'Dancer'] },
   { role: 'Casters', jobs: ['BlackMage', 'Summoner', 'RedMage', 'Pictomancer'] },
 ]
+
+// 'DarkKnight' -> 'Dark Knight'
+export function jobDisplayName(job: string) {
+  return job.replace(/([a-z])([A-Z])/g, '$1 $2')
+}

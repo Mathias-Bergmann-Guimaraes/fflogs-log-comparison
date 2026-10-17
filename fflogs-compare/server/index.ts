@@ -3,23 +3,12 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { csrf } from 'hono/csrf'
 import { db } from './db.ts'
-import {
-  type AuthEnv,
-  currentUser,
-  endSession,
-  hashPassword,
-  purgeExpiredSessions,
-  requireAuth,
-  startSession,
-  verifyPassword,
-} from './auth.ts'
+import { type AuthEnv, currentUser, endSession, hashPassword, purgeExpiredSessions, startSession, verifyPassword } from './auth.ts'
 import { google, googleEnabled } from './google.ts'
+import { bis } from './bis.ts'
 
 const PORT = Number(process.env.PORT ?? 3000)
 
-// Kept in sync by hand with EquipmentStatus in src/types/EquipmentType.ts
-const VALID_STATUSES = new Set(['raid', 'tome', 'twine', 'glaze', 'acquired'])
-const SLOT_COUNT = 10
 const USERNAME_RE = /^[\w.-]{3,32}$/
 
 const api = new Hono<AuthEnv>()
@@ -85,41 +74,6 @@ api.route('/auth/google', google)
 api.get('/auth/me', (c) => {
   const user = currentUser(c)
   return user ? c.json(user) : c.json({ error: 'Not logged in' }, 401)
-})
-
-// --- BiS tracker ---
-
-const bis = new Hono<AuthEnv>()
-bis.use(requireAuth)
-
-// Returns only the slots the user has changed: { [job]: { [slotIndex]: status } }
-bis.get('/', (c) => {
-  const rows = db
-    .prepare('SELECT job, slot_index, status FROM bis_slots WHERE user_id = ?')
-    .all(c.get('user').id) as { job: string; slot_index: number; status: string }[]
-
-  const result: Record<string, Record<number, string>> = {}
-  for (const { job, slot_index, status } of rows) {
-    ;(result[job] ??= {})[slot_index] = status
-  }
-  return c.json(result)
-})
-
-bis.put('/:job/:slot', async (c) => {
-  const job = c.req.param('job')
-  const slot = Number(c.req.param('slot'))
-  const { status } = await c.req.json<{ status?: unknown }>()
-
-  if (!/^[A-Za-z]{2,32}$/.test(job)) return c.json({ error: 'Invalid job' }, 400)
-  if (!Number.isInteger(slot) || slot < 0 || slot >= SLOT_COUNT) return c.json({ error: 'Invalid slot' }, 400)
-  if (typeof status !== 'string' || !VALID_STATUSES.has(status)) return c.json({ error: 'Invalid status' }, 400)
-
-  db.prepare(
-    `INSERT INTO bis_slots (user_id, job, slot_index, status, updated_at) VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT (user_id, job, slot_index) DO UPDATE SET status = excluded.status, updated_at = excluded.updated_at`,
-  ).run(c.get('user').id, job, slot, status, Date.now())
-
-  return c.body(null, 204)
 })
 
 api.route('/bis', bis)

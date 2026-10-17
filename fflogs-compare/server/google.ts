@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { Hono } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
-import { db } from './db.ts'
+import { db, transaction } from './db.ts'
 import { startSession } from './auth.ts'
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID
@@ -67,8 +67,7 @@ function findOrCreateUser(claims: GoogleClaims): number {
   if (linked) return linked.user_id
 
   // Deliberately no matching on email to existing password accounts: usernames don't prove email ownership
-  db.exec('BEGIN')
-  try {
+  return transaction(() => {
     const now = Date.now()
     const { lastInsertRowid } = db
       .prepare('INSERT INTO users (username, password_hash, created_at) VALUES (?, NULL, ?)')
@@ -80,12 +79,8 @@ function findOrCreateUser(claims: GoogleClaims): number {
       claims.email ?? null,
       now,
     )
-    db.exec('COMMIT')
     return userId
-  } catch (err) {
-    db.exec('ROLLBACK')
-    throw err
-  }
+  })
 }
 
 export const google = new Hono()
