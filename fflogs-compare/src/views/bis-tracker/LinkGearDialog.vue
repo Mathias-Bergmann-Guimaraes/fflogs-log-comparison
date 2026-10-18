@@ -43,7 +43,11 @@
                 :title="`${bisSlotLabels[i - 1]}: ${draft[row.job]!.has(i - 1) ? 'linked' : 'not linked'}`"
                 @click="toggleSlot(row.job, i - 1)"
               >
-                <img :src="equipmentIcons[bisSlots[i - 1]!]" alt="" class="size-full rounded-sm" />
+                <img
+                  :src="gearPiece(row.job, bisSlots[i - 1]!, gearSourceOf(bis.statusOf(row.job, i - 1))).icon"
+                  alt=""
+                  class="size-full rounded-sm"
+                />
               </button>
               <div
                 v-else
@@ -70,7 +74,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { EquipmentStatus } from '@/types/EquipmentType'
-import { equipmentIcons } from '@/constants/icons'
+import { gearPiece, gearSourceOf } from '@/constants/icons'
 import { bisSlotLabels, bisSlots } from '@/constants/bisSlots'
 import { jobDisplayName } from '@/constants/jobs'
 import { ACCESSORY_SLOTS, ARMOUR_SLOTS, SLOT_COUNT, linkableJobs, sharedSlots } from '@/constants/gearSharing'

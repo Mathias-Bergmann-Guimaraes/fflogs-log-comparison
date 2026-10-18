@@ -12,7 +12,12 @@
         <template #renderItem="{ item }">
           <!-- A just-bought row stays put for UNDO_MS with a draining bar, then drops out -->
           <a-list-item class="relative px-0!" :style="{ height: `${ROW_PX}px` }">
-            <item-cell :slot-index="item.purchase.slot" :jobs="item.purchase.jobs" :class="{ 'opacity-40': item.pending }" />
+            <item-cell
+              :slot-index="item.purchase.slot"
+              :jobs="item.purchase.jobs"
+              :source="item.purchase.source === 'tome' ? 'tome' : 'raid'"
+              :class="{ 'opacity-40': item.pending }"
+            />
             <template #actions>
               <a-tooltip :title="currency(item.purchase)">
                 <span class="inline-flex items-center gap-1.5 tabular-nums" :class="{ 'opacity-40': item.pending }">

@@ -15,7 +15,8 @@
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/",
-    "codegen": "node --env-file=.env node_modules/@graphql-codegen/cli/cjs/bin.js --config codegen.ts",
+    "gear-icons": "node --experimental-strip-types scripts/gear-icons.ts && prettier --write src/constants/gearItems.ts",
+    "codegen":"node --env-file=.env node_modules/@graphql-codegen/cli/cjs/bin.js --config codegen.ts",
     "start": "node --env-file-if-exists=.env --experimental-sqlite --experimental-strip-types server/index.ts"
   },
   "dependencies": {

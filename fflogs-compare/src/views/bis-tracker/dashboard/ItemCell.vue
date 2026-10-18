@@ -1,8 +1,10 @@
 <template>
   <div class="flex items-center gap-3">
     <!-- Plain <img> at whole-number fractions of the source size: the game icons are raster, and
-         odd scale factors (or a-avatar's border shaving 2px off) make them blurry. Item icons are 40px. -->
-    <img :src="equipmentIcons[bisSlots[slotIndex]!]" alt="" class="size-10 shrink-0 rounded-md" />
+         odd scale factors (or a-avatar's border shaving 2px off) make them blurry. Gear icons are 80px. -->
+    <a-tooltip :title="piece.name">
+      <img :src="piece.icon" :alt="piece.name ?? ''" class="size-10 shrink-0 rounded-md" />
+    </a-tooltip>
     <div class="min-w-0">
       <div class="leading-tight">{{ bisSlotLabels[slotIndex] }}</div>
       <div class="mt-1 flex gap-1">
@@ -22,12 +24,15 @@
 </template>
 
 <script setup lang="ts">
-import { equipmentIcons } from '@/constants/icons'
+import { computed } from 'vue'
+import { gearPiece, type GearSource } from '@/constants/icons'
 import { bisSlotLabels, bisSlots } from '@/constants/bisSlots'
 import { jobDisplayName } from '@/constants/jobs'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 
-defineProps<{ slotIndex: number; jobs: string[] }>()
+// `jobs` are linked on this slot, so they all wear the same piece
+const props = defineProps<{ slotIndex: number; jobs: string[]; source: GearSource }>()
 
 const favorites = useFavoritesStore()
+const piece = computed(() => gearPiece(props.jobs[0]!, bisSlots[props.slotIndex]!, props.source))
 </script>

@@ -48,6 +48,7 @@
       <!-- Wrapper owns the hover: a-dropdown (EquipmentSlot's root) doesn't pass mouse events through -->
       <div v-for="(slot, i) in bisSlots" :key="i" @mouseenter="bis.highlight = { job, slot: i }" @mouseleave="bis.highlight = null">
         <equipment-slot
+          :job="job"
           :status="bis.statusOf(job, i)"
           :type="slot"
           :linked-jobs="bis.linkedOnSlot(job, i)"

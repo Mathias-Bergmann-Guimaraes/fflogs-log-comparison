@@ -13,7 +13,12 @@
   >
     <template #bodyCell="{ column, record, index }">
       <span v-if="column.key === 'order'" class="text-gray-500 tabular-nums">{{ index + 1 }}</span>
-      <item-cell v-else-if="column.key === 'item'" :slot-index="record.slot" :jobs="record.jobs" />
+      <item-cell
+        v-else-if="column.key === 'item'"
+        :slot-index="record.slot"
+        :jobs="record.jobs"
+        :source="record.source === 'tome' ? 'tome' : 'raid'"
+      />
       <span v-else-if="column.key === 'cost'" class="tabular-nums">{{ record.cost.toLocaleString() }}</span>
       <template v-else-if="column.key === 'upgrade'">
         <a-tooltip v-if="record.upgrade" :title="`Then needs a ${record.upgrade}`">

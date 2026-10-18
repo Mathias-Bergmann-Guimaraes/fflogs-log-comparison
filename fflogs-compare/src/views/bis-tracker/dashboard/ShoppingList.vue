@@ -48,7 +48,7 @@
           :locale="{ emptyText: 'No upgrades needed' }"
         >
           <template #bodyCell="{ column, record }">
-            <item-cell v-if="column.key === 'item'" :slot-index="record.slot" :jobs="record.jobs" />
+            <item-cell v-if="column.key === 'item'" :slot-index="record.slot" :jobs="record.jobs" source="tome" />
             <span v-else-if="column.key === 'kind'" class="inline-flex items-center gap-1.5">
               <img :src="record.kind === 'twine' ? twineIcon : glazeIcon" alt="" class="size-4" />
               {{ record.kind === 'twine' ? 'Twine' : 'Glaze' }}

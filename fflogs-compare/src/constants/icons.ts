@@ -3,6 +3,7 @@ import raidIcon from '@/assets/raid.png'
 import tomeIcon from '@/assets/Allagan_Tomestone_of_Mnemonics.png'
 import twineIcon from '@/assets/Thundersteeped_twine_icon1.png'
 import glazeIcon from '@/assets/Thundersteeping_glaze_icon1.png'
+import { gearItemIds, gearItemNames } from '@/constants/gearItems'
 
 const ICON_BASE = 'https://lds-img.finalfantasyxiv.com/itemicon'
 
@@ -24,4 +25,17 @@ export const equipmentStatusIcons: Record<EquipmentStatus, string> = {
   [EquipmentStatus.TWINE]: twineIcon,
   [EquipmentStatus.GLAZE]: glazeIcon,
   [EquipmentStatus.ACQUIRED]: ``,
+}
+
+export type GearSource = 'raid' | 'tome'
+
+// Twine and glaze upgrade the tome piece. An acquired slot doesn't say where it came from, so it shows the raid piece.
+export function gearSourceOf(status: EquipmentStatus): GearSource {
+  return status === EquipmentStatus.RAID || status === EquipmentStatus.ACQUIRED ? 'raid' : 'tome'
+}
+
+// The job's actual piece this tier (icons are 80px), or the generic slot icon if gearItems.ts doesn't know the job
+export function gearPiece(job: string, type: EquipmentType, source: GearSource): { icon: string; name: string | null } {
+  const id = gearItemIds[job]?.[type]?.[source === 'raid' ? 0 : 1]
+  return id ? { icon: `/gear/${id}.png`, name: gearItemNames[id] ?? null } : { icon: equipmentIcons[type], name: null }
 }

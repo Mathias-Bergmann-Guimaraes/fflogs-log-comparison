@@ -35,7 +35,7 @@
 
 <script setup lang="ts">
 import { EquipmentStatus, EquipmentType, isAccessory } from '@/types/EquipmentType'
-import { equipmentIcons, equipmentStatusIcons } from '@/constants/icons'
+import { equipmentStatusIcons, gearPiece, gearSourceOf } from '@/constants/icons'
 import { equipmentStatuses, statusOptionsFor } from '@/constants/equipmentStatus'
 
 import CheckIcon from './CheckIcon.vue'
@@ -43,6 +43,7 @@ import { computed } from 'vue'
 import { jobDisplayName } from '@/constants/jobs'
 
 const props = defineProps<{
+  job: string
   type: EquipmentType
   // Other jobs sharing this slot; changing it changes theirs too
   linkedJobs?: string[]
@@ -56,10 +57,13 @@ function onStatusClick({ key }: { key: string | number }) {
   status.value = key as EquipmentStatus
 }
 
-const equipmentImage = computed(() => equipmentIcons[props.type])
+// Shows the piece this status is after: the raid one, or the tome one (also what twine/glaze upgrade)
+const piece = computed(() => gearPiece(props.job, props.type, gearSourceOf(status.value)))
+const equipmentImage = computed(() => piece.value.icon)
 
 const title = computed(() => {
-  const label = equipmentStatuses[status.value].label
+  const statusLabel = equipmentStatuses[status.value].label
+  const label = piece.value.name ? `${statusLabel}: ${piece.value.name}` : statusLabel
   return props.linkedJobs?.length ? `${label} · linked with ${props.linkedJobs.map(jobDisplayName).join(', ')}` : label
 })
 </script>
