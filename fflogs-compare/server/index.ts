@@ -6,6 +6,7 @@ import { db } from './db.ts'
 import { type AuthEnv, currentUser, endSession, hashPassword, purgeExpiredSessions, startSession, verifyPassword } from './auth.ts'
 import { google, googleEnabled } from './google.ts'
 import { bis } from './bis.ts'
+import { settings } from './settings.ts'
 
 const PORT = Number(process.env.PORT ?? 3000)
 
@@ -77,6 +78,7 @@ api.get('/auth/me', (c) => {
 })
 
 api.route('/bis', bis)
+api.route('/settings', settings)
 
 // --- App ---
 

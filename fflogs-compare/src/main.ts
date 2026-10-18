@@ -16,6 +16,7 @@ import {
   LegendComponent,
   MarkLineComponent,
   MarkAreaComponent,
+  DataZoomComponent,
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 
@@ -30,6 +31,7 @@ use([
   LegendComponent,
   MarkLineComponent,
   MarkAreaComponent,
+  DataZoomComponent,
 ])
 
 const app = createApp(App)

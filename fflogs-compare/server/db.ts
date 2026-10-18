@@ -89,6 +89,16 @@ const migrations: string[] = [
     SELECT l.user_id, l.job, slot.i, l.group_id FROM job_links l CROSS JOIN slot;
   DROP TABLE job_links;
   `,
+  // 5: per-user UI settings (e.g. the dashboard layout), one JSON value per key
+  `
+  CREATE TABLE user_settings (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    key        TEXT NOT NULL,
+    value      TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, key)
+  );
+  `,
 ]
 
 // node:sqlite has no transaction helper; synchronous fn only, so nothing else can interleave

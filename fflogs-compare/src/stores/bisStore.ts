@@ -5,6 +5,7 @@ import { apiFetch } from '@/api/backend'
 import { EquipmentStatus, isAccessory } from '@/types/EquipmentType'
 import { bisSlots } from '@/constants/bisSlots'
 import { tomeCosts } from '@/constants/tomeCosts'
+import { floorOf, raidFloors, type RaidFloor, type RaidNeeds } from '@/constants/raidFloors'
 import { useAuthStore } from './authStore'
 
 // Only slots the user has changed; anything missing is EquipmentStatus.RAID
@@ -57,16 +58,19 @@ export const useBisStore = defineStore('bis', () => {
     return [...new Set(slotIndexes.flatMap((i) => linkedOnSlot(job, i)))]
   }
 
-  // Optimistic: update the UI now (the server mirrors this to linked jobs), roll back if it fails
-  async function setStatus(job: string, slotIndex: number, status: EquipmentStatus) {
+  // Optimistic: update the UI now (the server mirrors this to linked jobs), roll back if it fails.
+  // Resolves to whether the save stuck, for callers that do more on success.
+  async function setStatus(job: string, slotIndex: number, status: EquipmentStatus): Promise<boolean> {
     const affected = [job, ...linkedOnSlot(job, slotIndex)]
     const previous = affected.map((j) => statusOf(j, slotIndex))
     for (const j of affected) (slots.value[j] ??= {})[slotIndex] = status
     try {
       await apiFetch(`/bis/${job}/${slotIndex}`, { method: 'PUT', body: { status } })
+      return true
     } catch (err) {
       affected.forEach((j, i) => (slots.value[j]![slotIndex] = previous[i]!))
       message.error(`Couldn't save: ${errorText(err)}`)
+      return false
     }
   }
 
@@ -82,23 +86,50 @@ export const useBisStore = defineStore('bis', () => {
     }
   }
 
-  // Items across `jobs` that still cost something. A linked item is one purchase,
-  // so it's listed once however many of the jobs share it.
-  function neededPieces(jobs: readonly string[]): (Materials & { job: string; slot: number })[] {
+  // Each item across `jobs` once: a linked item is a single purchase however many of the jobs share it
+  function uniqueSlots(jobs: readonly string[], keep: (job: string, slot: number) => boolean): { job: string; slot: number }[] {
     const seen = new Set<string>()
-    const pieces: (Materials & { job: string; slot: number })[] = []
+    const result: { job: string; slot: number }[] = []
     for (const job of jobs) {
       bisSlots.forEach((_, slot) => {
-        const cost = costOf(slot, statusOf(job, slot))
-        if (!cost.tomes && !cost.twines && !cost.glazes) return
+        if (!keep(job, slot)) return
         const groupId = links.value[job]?.[slot]
         const key = groupId === undefined ? `${job}:${slot}` : `group:${slot}:${groupId}`
         if (seen.has(key)) return
         seen.add(key)
-        pieces.push({ job, slot, ...cost })
+        result.push({ job, slot })
       })
     }
-    return pieces
+    return result
+  }
+
+  // Items across `jobs` that still cost tomes, twines or glazes
+  function neededPieces(jobs: readonly string[]): (Materials & { job: string; slot: number })[] {
+    return uniqueSlots(jobs, (job, slot) => {
+      const cost = costOf(slot, statusOf(job, slot))
+      return cost.tomes + cost.twines + cost.glazes > 0
+    }).map((p) => ({ ...p, ...costOf(p.slot, statusOf(p.job, p.slot)) }))
+  }
+
+  // A job counts as tracked once any item has been changed: Raid is the default status,
+  // so untouched jobs would otherwise each "need" every raid item
+  function isTracked(job: string) {
+    return Object.keys(slots.value[job] ?? {}).length > 0
+  }
+
+  // Raid items still needed across tracked `jobs`, with the floor that drops them
+  function raidPieces(jobs: readonly string[]): { job: string; slot: number; floor: RaidFloor }[] {
+    return uniqueSlots(jobs.filter(isTracked), (job, slot) => statusOf(job, slot) === EquipmentStatus.RAID).flatMap((p) => {
+      const floor = floorOf(p.slot)
+      return floor ? [{ ...p, floor }] : []
+    })
+  }
+
+  // Books to buy every raid item still needed, per floor (items x that floor's book cost)
+  function booksNeeded(jobs: readonly string[]): RaidNeeds {
+    const books: RaidNeeds = { 1: 0, 2: 0, 3: 0, 4: 0 }
+    for (const p of raidPieces(jobs)) books[p.floor] += raidFloors.find((f) => f.floor === p.floor)!.bookCost
+    return books
   }
 
   function materialsNeeded(jobs: readonly string[]): Materials {
@@ -149,6 +180,9 @@ export const useBisStore = defineStore('bis', () => {
     setStatus,
     saveLinks,
     neededPieces,
+    isTracked,
+    raidPieces,
+    booksNeeded,
     materialsNeeded,
     highlight,
     isHighlighted,

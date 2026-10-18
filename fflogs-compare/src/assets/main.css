@@ -5,3 +5,19 @@
     @apply bg-gray-900 text-gray-100 min-h-screen;
   }
 }
+
+/* Fixed-height table body with a thin dark scrollbar (BiS dashboard shopping list).
+   Unlayered + !important: Ant's CSS-in-JS styles would otherwise win. */
+.fixed-rows-table .ant-table-body {
+  height: var(--table-body-height) !important;
+  max-height: var(--table-body-height) !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: #434343 transparent;
+}
+
+/* Tailwind's preflight gives every <svg> `vertical-align: middle`, which pushes Ant's icons a few px
+   below the text they sit next to (Ant positions them from the baseline). Put them back on it. */
+.anticon > svg {
+  vertical-align: baseline;
+}

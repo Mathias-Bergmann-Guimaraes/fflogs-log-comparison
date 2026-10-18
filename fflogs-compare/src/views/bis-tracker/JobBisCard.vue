@@ -43,6 +43,17 @@
       </div>
     </div>
 
+    <!-- Raid drops still needed, per floor -->
+    <div class="mt-3 flex justify-between border-t border-gray-700 px-1 pt-2.5">
+      <a-tooltip v-for="f in raidFloors" :key="f.floor" :title="floorTooltip(f.floor)">
+        <span class="inline-flex cursor-default items-center gap-1.5 text-xs tabular-nums">
+          <floor-book :floor="f.floor" :size="20" />
+          <span v-if="!bis.isTracked(job) || !f.slots.length" class="text-gray-500">–</span>
+          <span v-else :class="raid[f.floor] === 0 ? 'text-green-400' : ''">{{ raid[f.floor] }}</span>
+        </span>
+      </a-tooltip>
+    </div>
+
     <!-- What this set still needs; hover each for the items behind it -->
     <template #actions>
       <a-tooltip v-for="m in materialDefs" :key="m.key">
@@ -67,11 +78,13 @@ import { computed, ref } from 'vue'
 import { LinkOutlined } from '@ant-design/icons-vue'
 import EquipmentSlot from './EquipmentSlot.vue'
 import LinkGearDialog from './LinkGearDialog.vue'
+import FloorBook from './FloorBook.vue'
 import { EquipmentStatus } from '@/types/EquipmentType'
 import { bisSlotLabels, bisSlots } from '@/constants/bisSlots'
 import { jobDisplayName } from '@/constants/jobs'
 import { sharedSlots } from '@/constants/gearSharing'
 import { materialDefs } from '@/constants/materials'
+import { raidFloors, type RaidFloor } from '@/constants/raidFloors'
 import { useBisStore, type Materials } from '@/stores/bisStore'
 
 const props = defineProps<{
@@ -102,6 +115,20 @@ const breakdown = computed(() => {
   }
   return lines
 })
+
+const raid = computed(() => bis.booksNeeded([props.job]))
+
+// 'Floor 2: Head, Feet (8 books)' / why there's no number
+function floorTooltip(floor: RaidFloor) {
+  const def = raidFloors.find((f) => f.floor === floor)!
+  if (!def.slots.length) return `${def.label}: weapons aren't tracked yet`
+  if (!bis.isTracked(props.job)) return `${def.label}: change any item to start tracking this job`
+  const items = bis
+    .raidPieces([props.job])
+    .filter((p) => p.floor === floor)
+    .map((p) => bisSlotLabels[p.slot])
+  return items.length ? `${def.label}: ${items.join(', ')} (${items.length * def.bookCost} books)` : `${def.label}: nothing needed`
+}
 
 // 'Bard: shares all accessories' / 'Viper: shares Head, Body'
 function sharedSummary(other: string) {
