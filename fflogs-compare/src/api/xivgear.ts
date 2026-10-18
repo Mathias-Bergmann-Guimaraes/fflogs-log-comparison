@@ -1,0 +1,129 @@
+// Reads gear sets from xivgear.app links. Both its APIs allow cross-origin requests, so this runs in the browser.
+import { EquipmentStatus, EquipmentType, type GearSource } from '@/types/EquipmentType'
+import { bisSlots } from '@/constants/bisSlots'
+import { gearItemIds, gearItemNames } from '@/constants/gearItems'
+
+const SHORTLINK_API = 'https://api.xivgear.app/shortlink'
+const STATIC_BIS = 'https://staticbis.xivgear.app'
+
+// xivgear's job abbreviations -> our job names
+const jobsByAbbreviation: Record<string, string> = {
+  PLD: 'Paladin',
+  WAR: 'Warrior',
+  DRK: 'DarkKnight',
+  GNB: 'Gunbreaker',
+  WHM: 'WhiteMage',
+  SCH: 'Scholar',
+  AST: 'Astrologian',
+  SGE: 'Sage',
+  MNK: 'Monk',
+  DRG: 'Dragoon',
+  NIN: 'Ninja',
+  SAM: 'Samurai',
+  RPR: 'Reaper',
+  VPR: 'Viper',
+  BRD: 'Bard',
+  MCH: 'Machinist',
+  DNC: 'Dancer',
+  BLM: 'BlackMage',
+  SMN: 'Summoner',
+  RDM: 'RedMage',
+  PCT: 'Pictomancer',
+}
+
+// xivgear's slot keys, in bisSlots order (the weapon isn't tracked)
+const xivgearSlots = ['Head', 'Body', 'Hand', 'Legs', 'Feet', 'Ears', 'Neck', 'Wrist', 'RingLeft', 'RingRight'] as const
+
+type XivgearItems = Partial<Record<string, { id: number }>>
+type XivgearSet = { name?: string; items?: XivgearItems; isSeparator?: boolean; job?: string }
+// A shared link is either one set or a whole sheet of them
+type XivgearResponse = XivgearSet & { sets?: XivgearSet[] }
+
+export type ImportedSet = { name: string; job: string | null; itemIds: (number | null)[] }
+export type ImportedSheet = { name: string; sets: ImportedSet[]; preferredIndex: number }
+
+// What a link points at: a saved set/sheet (shortlink) or one of xivgear's curated BiS sheets.
+// Accepts xivgear.app/sl/<uuid>, xivgear.app/?page=sl|<uuid>, xivgear.app/?page=bis|sch|current, or a bare uuid.
+function sourceUrl(link: string): { url: string; setIndex: number | null } {
+  const text = link.trim()
+  if (/^[0-9a-f-]{36}$/i.test(text)) return { url: `${SHORTLINK_API}/${text}`, setIndex: null }
+
+  let parsed: URL
+  try {
+    parsed = new URL(text)
+  } catch {
+    throw new Error("That isn't a link")
+  }
+  if (!/(^|\.)xivgear\.app$/.test(parsed.hostname)) throw new Error('Only xivgear.app links can be imported')
+
+  const index = parsed.searchParams.get('onlySetIndex') ?? parsed.searchParams.get('selectedIndex')
+  const setIndex = index !== null && /^\d+$/.test(index) ? Number(index) : null
+  const page = parsed.searchParams.get('page')
+  const parts = (page ? page.split('|') : parsed.pathname.split('/')).filter(Boolean).map(decodeURIComponent)
+
+  const [kind, ...rest] = parts
+  if (kind === 'sl' && rest[0]) return { url: `${SHORTLINK_API}/${rest[0]}`, setIndex }
+  if (kind === 'bis' && rest.length >= 2) return { url: `${STATIC_BIS}/${rest.join('/')}.json`, setIndex }
+  throw new Error("That xivgear link doesn't point at a saved set or BiS sheet")
+}
+
+const itemIdsOf = (items: XivgearItems = {}) => xivgearSlots.map((slot) => items[slot]?.id ?? null)
+
+export async function fetchXivgearSheet(link: string): Promise<ImportedSheet> {
+  const { url, setIndex } = sourceUrl(link)
+  const res = await fetch(url)
+  if (res.status === 404) throw new Error("xivgear couldn't find that set. Check the link")
+  if (!res.ok) throw new Error(`xivgear returned ${res.status}`)
+  const data = (await res.json()) as XivgearResponse
+
+  const sheetJob = (data.job && jobsByAbbreviation[data.job]) ?? null
+  const toSet = (set: XivgearSet, fallbackName: string): ImportedSet => ({
+    name: set.name || fallbackName,
+    job: (set.job && jobsByAbbreviation[set.job]) ?? sheetJob,
+    itemIds: itemIdsOf(set.items),
+  })
+
+  // Separators are headings between sets in the sheet, not sets. Keep the original index so ?onlySetIndex= still points right.
+  const sets = data.sets ? data.sets.map((set, i) => ({ set, i })).filter(({ set }) => !set.isSeparator) : [{ set: data as XivgearSet, i: 0 }]
+  if (!sets.length) throw new Error('That sheet has no gear sets')
+
+  const imported = sets.map(({ set }, n) => toSet(set, `Set ${n + 1}`))
+  const preferred = setIndex === null ? -1 : sets.findIndex(({ i }) => i === setIndex)
+  return { name: data.name || imported[0]!.name, sets: imported, preferredIndex: Math.max(preferred, 0) }
+}
+
+// What the set means for one slot: the raid or tome piece we track, nothing (empty slot),
+// or an item this tier's raid/tome gear doesn't include (crafted, relic, an older tier...)
+export type SlotImport = { kind: 'piece'; source: GearSource } | { kind: 'empty' } | { kind: 'other'; itemId: number }
+
+export function slotImports(job: string, itemIds: readonly (number | null)[]): SlotImport[] {
+  return bisSlots.map((type: EquipmentType, slot) => {
+    const id = itemIds[slot]
+    if (!id) return { kind: 'empty' }
+    const [raid, tome] = gearItemIds[job]?.[type] ?? []
+    if (id === raid) return { kind: 'piece', source: 'raid' }
+    if (id === tome) return { kind: 'piece', source: 'tome' }
+    return { kind: 'other', itemId: id }
+  })
+}
+
+// The slot's new status: progress is kept while the piece stays the same, otherwise it starts over on the new piece
+export function importedStatus(current: EquipmentStatus, currentSource: GearSource, source: GearSource): EquipmentStatus {
+  if (currentSource === source) return current
+  return source === 'raid' ? EquipmentStatus.RAID : EquipmentStatus.TOME
+}
+
+// Names (with item level) of items gearItems.ts doesn't know, from XIVAPI. Best effort: missing names just aren't shown.
+export async function fetchItemNames(ids: readonly number[]): Promise<Record<number, string>> {
+  const unknown = [...new Set(ids)].filter((id) => !gearItemNames[id])
+  if (!unknown.length) return {}
+  try {
+    const params = new URLSearchParams({ rows: unknown.join(','), fields: 'Name,LevelItem.value' })
+    const res = await fetch(`https://v2.xivapi.com/api/sheet/Item?${params}`)
+    if (!res.ok) return {}
+    const data = (await res.json()) as { rows: { row_id: number; fields: { Name: string; LevelItem: { value: number } } }[] }
+    return Object.fromEntries(data.rows.map((r) => [r.row_id, `${r.fields.Name} (i${r.fields.LevelItem.value})`]))
+  } catch {
+    return {}
+  }
+}

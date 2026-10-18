@@ -94,6 +94,12 @@ export const useBisStore = defineStore('bis', () => {
     }
   }
 
+  // Several slots at once (an imported BiS set); linked jobs follow on the server. Throws so the import dialog can stay open.
+  async function setStatuses(job: string, statuses: Record<number, EquipmentStatus>) {
+    await apiFetch(`/bis/${job}`, { method: 'PUT', body: { statuses } })
+    await fetchState()
+  }
+
   // What each unfinished item still costs. A Tome item needs the tome piece and then its upgrade
   // (twine for armour, glaze for accessories); a Twine/Glaze item only needs the upgrade.
   function costOf(slot: number, status: EquipmentStatus): Materials {
@@ -205,6 +211,7 @@ export const useBisStore = defineStore('bis', () => {
     isLinked,
     linkedWith,
     setStatus,
+    setStatuses,
     saveLinks,
     neededPieces,
     isTracked,

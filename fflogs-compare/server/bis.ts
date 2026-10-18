@@ -10,6 +10,13 @@ const VALID_STATUSES = new Set(['raid', 'tome', 'twine', 'glaze', 'acquired'])
 // a slot with no row yet was on the default Raid status.
 const sourceOf = (status: string) => (status === 'tome' || status === 'twine' || status === 'glaze' ? 'tome' : 'raid')
 
+// Params: user_id, job, slot_index, status, source, updated_at. An 'acquired' slot keeps the source it already had.
+const UPSERT_SLOT = `INSERT INTO bis_slots (user_id, job, slot_index, status, source, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+  ON CONFLICT (user_id, job, slot_index) DO UPDATE SET
+    status = excluded.status,
+    source = CASE WHEN excluded.status = 'acquired' THEN bis_slots.source ELSE excluded.source END,
+    updated_at = excluded.updated_at`
+
 const isJob = (job: unknown): job is string => typeof job === 'string' && allJobs.includes(job)
 const isSlot = (slot: unknown): slot is number => Number.isInteger(slot) && (slot as number) >= 0 && (slot as number) < SLOT_COUNT
 
@@ -108,18 +115,37 @@ bis.put('/:job/:slot{[0-9]+}', async (c) => {
   if (!isSlot(slot)) return c.json({ error: 'Invalid slot' }, 400)
   if (typeof status !== 'string' || !VALID_STATUSES.has(status)) return c.json({ error: 'Invalid status' }, 400)
 
-  const upsert = db.prepare(
-    `INSERT INTO bis_slots (user_id, job, slot_index, status, source, updated_at) VALUES (?, ?, ?, ?, ?, ?)
-     ON CONFLICT (user_id, job, slot_index) DO UPDATE SET
-       status = excluded.status,
-       source = CASE WHEN excluded.status = 'acquired' THEN bis_slots.source ELSE excluded.source END,
-       updated_at = excluded.updated_at`,
-  )
+  const upsert = db.prepare(UPSERT_SLOT)
   const now = Date.now()
   transaction(() => {
     for (const j of jobsSharingSlot(userId, job, slot)) upsert.run(userId, j, slot, status, sourceOf(status), now)
   })
 
+  return c.body(null, 204)
+})
+
+// Sets several of :job's slots at once (an imported BiS set): { statuses: { [slotIndex]: status } }.
+// Same rules as the single-slot PUT, linked jobs included, in one transaction so an import is all or nothing.
+bis.put('/:job', async (c) => {
+  const userId = c.get('user').id
+  const job = c.req.param('job')
+  const { statuses } = await c.req.json<{ statuses?: unknown }>()
+
+  if (!isJob(job)) return c.json({ error: 'Invalid job' }, 400)
+  if (typeof statuses !== 'object' || statuses === null) return c.json({ error: 'Invalid statuses' }, 400)
+  const entries = Object.entries(statuses as Record<string, unknown>).map(([slot, status]) => [Number(slot), status] as const)
+  for (const [slot, status] of entries) {
+    if (!isSlot(slot)) return c.json({ error: 'Invalid slot' }, 400)
+    if (typeof status !== 'string' || !VALID_STATUSES.has(status)) return c.json({ error: 'Invalid status' }, 400)
+  }
+
+  const upsert = db.prepare(UPSERT_SLOT)
+  const now = Date.now()
+  transaction(() => {
+    for (const [slot, status] of entries as [number, string][]) {
+      for (const j of jobsSharingSlot(userId, job, slot)) upsert.run(userId, j, slot, status, sourceOf(status), now)
+    }
+  })
   return c.body(null, 204)
 })
 
