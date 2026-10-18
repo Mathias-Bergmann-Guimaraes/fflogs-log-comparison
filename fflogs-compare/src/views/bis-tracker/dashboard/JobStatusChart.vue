@@ -14,15 +14,17 @@ import { bisSlots } from '@/constants/bisSlots'
 import { jobDisplayName } from '@/constants/jobs'
 import { useBisPlan } from '@/composables/useBisPlan'
 import { useBisStore } from '@/stores/bisStore'
+import { useFavoritesStore } from '@/stores/favoritesStore'
 import { axisStyle, barItemStyle, legendStyle, statusColors, tooltipStyle } from './chartTheme'
 
 const plan = useBisPlan()
 const bis = useBisStore()
+const favorites = useFavoritesStore()
 
 // Taller than this many jobs, the rest scroll inside the chart (mouse wheel or the slider on the right)
 const MAX_VISIBLE_JOBS = 10
 
-// Top to bottom in role order (ECharts draws category axes bottom-up)
+// Top to bottom favorites first, then role order (ECharts draws category axes bottom-up)
 const jobs = computed(() => [...plan.trackedJobs.value].reverse())
 
 const scrolls = computed(() => jobs.value.length > MAX_VISIBLE_JOBS)
@@ -41,7 +43,12 @@ const option = computed<EChartsOption>(() => ({
   legend: { ...legendStyle, top: 0, left: 0 },
   tooltip: { ...tooltipStyle, trigger: 'axis', axisPointer: { type: 'shadow' } },
   xAxis: { type: 'value', max: bisSlots.length, interval: 2, ...axisStyle },
-  yAxis: { type: 'category', data: jobs.value.map(jobDisplayName), ...axisStyle, splitLine: { show: false } },
+  yAxis: {
+    type: 'category',
+    data: jobs.value.map((job) => (favorites.isFavorite(job) ? `★ ${jobDisplayName(job)}` : jobDisplayName(job))),
+    ...axisStyle,
+    splitLine: { show: false },
+  },
   // Starts at the top of the list: the last categories, since the axis is drawn bottom-up
   dataZoom: scrolls.value
     ? [

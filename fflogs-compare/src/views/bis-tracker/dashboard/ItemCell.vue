@@ -7,8 +7,14 @@
       <div class="leading-tight">{{ bisSlotLabels[slotIndex] }}</div>
       <div class="mt-1 flex gap-1">
         <!-- Job icons are 76px: 19px is exactly a quarter -->
-        <a-tooltip v-for="j in jobs" :key="j" :title="jobDisplayName(j)">
-          <img :src="`/job/${j}.png`" :alt="jobDisplayName(j)" class="size-4.75 rounded-sm" />
+        <!-- Favorites get a gold ring -->
+        <a-tooltip v-for="j in jobs" :key="j" :title="favorites.isFavorite(j) ? `${jobDisplayName(j)} (favorite)` : jobDisplayName(j)">
+          <img
+            :src="`/job/${j}.png`"
+            :alt="jobDisplayName(j)"
+            class="size-4.75 rounded-sm"
+            :class="favorites.isFavorite(j) && 'ring-1 ring-amber-400'"
+          />
         </a-tooltip>
       </div>
     </div>
@@ -19,6 +25,9 @@
 import { equipmentIcons } from '@/constants/icons'
 import { bisSlotLabels, bisSlots } from '@/constants/bisSlots'
 import { jobDisplayName } from '@/constants/jobs'
+import { useFavoritesStore } from '@/stores/favoritesStore'
 
 defineProps<{ slotIndex: number; jobs: string[] }>()
+
+const favorites = useFavoritesStore()
 </script>

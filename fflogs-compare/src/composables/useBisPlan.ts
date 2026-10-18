@@ -5,6 +5,7 @@ import { raidFloors, floorOf, type RaidFloor } from '@/constants/raidFloors'
 import { bisSlots } from '@/constants/bisSlots'
 import { useBisStore } from '@/stores/bisStore'
 import { useStockStore } from '@/stores/stockStore'
+import { useFavoritesStore } from '@/stores/favoritesStore'
 
 export const WEEKLY_TOME_CAP = 450
 const BOOKS_PER_FLOOR_PER_WEEK = 1
@@ -80,14 +81,17 @@ const lastWeek = (purchases: Purchase[]) => purchases.reduce((max, p) => Math.ma
 export function useBisPlan() {
   const bis = useBisStore()
   const stockStore = useStockStore()
+  const favorites = useFavoritesStore()
 
-  const trackedJobs = computed(() => allJobs.filter(bis.isTracked))
+  // Favorites first, then role order: everything below is queued in this order
+  const jobOrder = computed(() => favorites.jobOrder)
+  const trackedJobs = computed(() => jobOrder.value.filter(bis.isTracked))
 
   const withJobs = (job: string, slot: number) => [job, ...bis.linkedOnSlot(job, slot)].filter((j) => allJobs.includes(j))
 
-  // --- Tomestones: items marked Tome, in job order ---
+  // --- Tomestones: items marked Tome, in job order (favorites first) ---
   const tomePurchases = computed<Purchase[]>(() => {
-    const pieces = bis.neededPieces(allJobs).filter((p) => p.tomes > 0)
+    const pieces = bis.neededPieces(jobOrder.value).filter((p) => p.tomes > 0)
     const stock = stockStore.stock
     const weeks = simulate(
       pieces.map((p) => p.tomes),
@@ -112,7 +116,7 @@ export function useBisPlan() {
   const cofferCovered = computed(() => {
     const left = { ...stockStore.stock.coffers }
     const covered = new Set<string>()
-    for (const p of [...bis.raidPieces(allJobs)].reverse()) {
+    for (const p of [...bis.raidPieces(jobOrder.value)].reverse()) {
       const type = bisSlots[p.slot]!
       if (!left[type]) continue
       left[type]--
@@ -125,7 +129,7 @@ export function useBisPlan() {
   const bookPurchases = computed<Record<RaidFloor, Purchase[]>>(() => {
     const stock = stockStore.stock
     const result: Record<RaidFloor, Purchase[]> = { 1: [], 2: [], 3: [], 4: [] }
-    const pieces = bis.raidPieces(allJobs).filter((p) => !cofferCovered.value.has(`${p.job}:${p.slot}`))
+    const pieces = bis.raidPieces(jobOrder.value).filter((p) => !cofferCovered.value.has(`${p.job}:${p.slot}`))
     for (const floor of raidFloors) {
       const onFloor = pieces.filter((p) => p.floor === floor.floor)
       const weeks = simulate(
@@ -149,7 +153,7 @@ export function useBisPlan() {
 
   // --- Upgrade materials: every Tome/Twine/Glaze item needs one ---
   const upgrades = computed(() => {
-    const pieces = bis.neededPieces(allJobs).filter((p) => p.twines || p.glazes)
+    const pieces = bis.neededPieces(jobOrder.value).filter((p) => p.twines || p.glazes)
     const items = pieces.map((p) => ({
       id: `upgrade:${p.job}:${p.slot}`,
       job: p.job,

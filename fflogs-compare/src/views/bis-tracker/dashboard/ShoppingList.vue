@@ -1,7 +1,7 @@
 <template>
   <a-card size="small" title="Shopping list" class="h-full">
     <template #extra>
-      <a-typography-text type="secondary" class="text-xs">Linked items are one purchase · bought in job order</a-typography-text>
+      <a-typography-text type="secondary" class="text-xs">Linked items are one purchase · favorites bought first</a-typography-text>
     </template>
 
     <a-tabs v-model:active-key="tab" size="small">

@@ -1,5 +1,11 @@
 <template>
-  <a-card size="small" class="w-56" :body-style="{ padding: '8px 12px 12px' }">
+  <!-- Favorites get a gold border, matching the star -->
+  <a-card
+    size="small"
+    class="w-56"
+    :class="favorite && 'border-amber-400! shadow-[0_0_12px_rgba(251,191,36,0.25)]'"
+    :body-style="{ padding: '8px 12px 12px' }"
+  >
     <template #title>
       <a-space :size="8">
         <a-avatar :src="jobIconPath(job)" shape="square" :size="24" />
@@ -7,6 +13,14 @@
       </a-space>
     </template>
     <template #extra>
+      <a-tooltip :title="favorite ? 'Favorite: bought and handed out first. Click to unstar' : 'Star to gear this job first'">
+        <a-button type="text" size="small" class="mr-1" :aria-pressed="favorite" @click="favorites.toggle(job)">
+          <template #icon>
+            <star-filled v-if="favorite" class="text-amber-400" />
+            <star-outlined v-else class="text-gray-500" />
+          </template>
+        </a-button>
+      </a-tooltip>
       <a-tag :color="acquiredCount === bisSlots.length ? 'success' : undefined" class="m-0! tabular-nums">
         {{ acquiredCount }}/{{ bisSlots.length }}
       </a-tag>
@@ -75,7 +89,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { LinkOutlined } from '@ant-design/icons-vue'
+import { LinkOutlined, StarFilled, StarOutlined } from '@ant-design/icons-vue'
 import EquipmentSlot from './EquipmentSlot.vue'
 import LinkGearDialog from './LinkGearDialog.vue'
 import FloorBook from './FloorBook.vue'
@@ -86,12 +100,15 @@ import { sharedSlots } from '@/constants/gearSharing'
 import { materialDefs } from '@/constants/materials'
 import { raidFloors, type RaidFloor } from '@/constants/raidFloors'
 import { useBisStore, type Materials } from '@/stores/bisStore'
+import { useFavoritesStore } from '@/stores/favoritesStore'
 
 const props = defineProps<{
   job: string
 }>()
 
 const bis = useBisStore()
+const favorites = useFavoritesStore()
+const favorite = computed(() => favorites.isFavorite(props.job))
 const dialogOpen = ref(false)
 
 const acquiredCount = computed(() => bisSlots.filter((_, i) => bis.statusOf(props.job, i) === EquipmentStatus.ACQUIRED).length)

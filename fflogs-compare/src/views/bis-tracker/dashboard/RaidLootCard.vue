@@ -75,7 +75,14 @@
               >
                 <!-- Same padding either way so rows with a linked group aren't taller -->
                 <div class="flex gap-0.5 rounded-md p-0.5" :class="need.jobs.length > 1 && 'bg-gray-700'">
-                  <img v-for="job in need.jobs" :key="job" :src="`/job/${job}.png`" :alt="jobDisplayName(job)" class="size-9.5 rounded-sm" />
+                  <img
+                    v-for="job in need.jobs"
+                    :key="job"
+                    :src="`/job/${job}.png`"
+                    :alt="jobDisplayName(job)"
+                    class="size-9.5 rounded-sm"
+                    :class="favorites.isFavorite(job) && 'ring-2 ring-amber-400'"
+                  />
                 </div>
               </button>
             </a-badge>
@@ -95,6 +102,7 @@ import { jobDisplayName } from '@/constants/jobs'
 import { raidFloors, type RaidFloor } from '@/constants/raidFloors'
 import { allJobs } from '@/composables/useBisPlan'
 import { useBisStore } from '@/stores/bisStore'
+import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useStockStore } from '@/stores/stockStore'
 import { useLootStore, type LootDrop } from '@/stores/lootStore'
 import CheckIcon from '../CheckIcon.vue'
@@ -106,6 +114,7 @@ type Need = { jobs: string[]; count: number; pieces: Piece[] }
 type Row = { key: string; floor: RaidFloor; label: string; icon: string; item: EquipmentType | 'twine' | 'glaze'; needs: Need[] }
 
 const bis = useBisStore()
+const favorites = useFavoritesStore()
 const stockStore = useStockStore()
 const loot = useLootStore()
 const floor = ref<RaidFloor>(1)
@@ -130,7 +139,8 @@ function toNeeds(pieces: Piece[]): Need[] {
 
 function rowsFor(floorNumber: RaidFloor): Row[] {
   const floorDef = raidFloors.find((f) => f.floor === floorNumber)!
-  const pieces = bis.raidPieces(allJobs).filter((p) => p.floor === floorNumber)
+  // Favorites first, so whoever you're gearing first is the first job on each row
+  const pieces = bis.raidPieces(favorites.jobOrder).filter((p) => p.floor === floorNumber)
 
   // Both ring slots drop the same ring, so they share a row
   const rows: Row[] = []
@@ -148,7 +158,7 @@ function rowsFor(floorNumber: RaidFloor): Row[] {
 
   if (floorDef.upgrade) {
     const kind = floorDef.upgrade
-    const pieces = bis.neededPieces(allJobs).filter((p) => (kind === 'twine' ? p.twines : p.glazes) > 0)
+    const pieces = bis.neededPieces(favorites.jobOrder).filter((p) => (kind === 'twine' ? p.twines : p.glazes) > 0)
     rows.push({
       key: kind,
       floor: floorNumber,

@@ -36,6 +36,7 @@ import { jobDisplayName } from '@/constants/jobs'
 import { allJobs } from '@/composables/useBisPlan'
 import { useBisStore } from '@/stores/bisStore'
 import { useStockStore } from '@/stores/stockStore'
+import { useFavoritesStore } from '@/stores/favoritesStore'
 
 const props = defineProps<{ type: EquipmentType }>()
 // After a successful give: what happened, and how to take it back (the parent shows the undo)
@@ -45,14 +46,15 @@ type Recipient = { id: string; job: string; slot: number; jobs: string[] }
 
 const bis = useBisStore()
 const stockStore = useStockStore()
+const favorites = useFavoritesStore()
 
 const def = computed(() => cofferDefs.find((c) => c.type === props.type)!)
 const held = computed(() => stockStore.stock.coffers[props.type])
 
-// Raid pieces of this slot type still needed, one per link group, in job order
+// Raid pieces of this slot type still needed, one per link group, in job order (favorites first)
 const recipients = computed<Recipient[]>(() =>
   bis
-    .raidPieces(allJobs)
+    .raidPieces(favorites.jobOrder)
     .filter((p) => bisSlots[p.slot] === props.type)
     .map((p) => ({
       id: `${p.job}:${p.slot}`,
