@@ -19,6 +19,9 @@ export enum EquipmentStatus {
   ACQUIRED = 'acquired',
 }
 
+// Which piece a slot's BiS is: the raid drop or the tome one (which twine/glaze then upgrade)
+export type GearSource = 'raid' | 'tome'
+
 const accessoryTypes = [EquipmentType.EARRINGS, EquipmentType.NECKLACE, EquipmentType.BRACELETS, EquipmentType.RING]
 
 export function isAccessory(type: EquipmentType) {

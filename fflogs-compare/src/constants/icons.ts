@@ -1,4 +1,4 @@
-import { EquipmentStatus, EquipmentType } from '@/types/EquipmentType'
+import { EquipmentStatus, EquipmentType, type GearSource } from '@/types/EquipmentType'
 import raidIcon from '@/assets/raid.png'
 import tomeIcon from '@/assets/Allagan_Tomestone_of_Mnemonics.png'
 import twineIcon from '@/assets/Thundersteeped_twine_icon1.png'
@@ -25,13 +25,6 @@ export const equipmentStatusIcons: Record<EquipmentStatus, string> = {
   [EquipmentStatus.TWINE]: twineIcon,
   [EquipmentStatus.GLAZE]: glazeIcon,
   [EquipmentStatus.ACQUIRED]: ``,
-}
-
-export type GearSource = 'raid' | 'tome'
-
-// Twine and glaze upgrade the tome piece. An acquired slot doesn't say where it came from, so it shows the raid piece.
-export function gearSourceOf(status: EquipmentStatus): GearSource {
-  return status === EquipmentStatus.RAID || status === EquipmentStatus.ACQUIRED ? 'raid' : 'tome'
 }
 
 // The job's actual piece this tier (icons are 80px), or the generic slot icon if gearItems.ts doesn't know the job

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { apiFetch } from '@/api/backend'
-import { EquipmentStatus, isAccessory } from '@/types/EquipmentType'
+import { EquipmentStatus, isAccessory, type GearSource } from '@/types/EquipmentType'
 import { bisSlots } from '@/constants/bisSlots'
 import { tomeCosts } from '@/constants/tomeCosts'
 import { floorOf, raidFloors, type RaidFloor, type RaidNeeds } from '@/constants/raidFloors'
@@ -10,6 +10,8 @@ import { useAuthStore } from './authStore'
 
 // Only slots the user has changed; anything missing is EquipmentStatus.RAID
 type SavedSlots = Record<string, Record<number, EquipmentStatus>>
+// Where each saved slot's piece comes from; the server keeps it when a slot becomes Acquired
+type SavedSources = Record<string, Record<number, GearSource>>
 // Linked slots only: job -> slot -> group id. Jobs with the same group id on a slot share it.
 type Links = Record<string, Record<number, number>>
 
@@ -19,12 +21,14 @@ const errorText = (err: unknown) => (err instanceof Error ? err.message : String
 
 export const useBisStore = defineStore('bis', () => {
   const slots = ref<SavedSlots>({})
+  const sources = ref<SavedSources>({})
   const links = ref<Links>({})
   const loading = ref(false)
 
   async function fetchState() {
-    const state = await apiFetch<{ slots: SavedSlots; links: Links }>('/bis')
+    const state = await apiFetch<{ slots: SavedSlots; sources: SavedSources; links: Links }>('/bis')
     slots.value = state.slots
+    sources.value = state.sources
     links.value = state.links
   }
 
@@ -39,6 +43,14 @@ export const useBisStore = defineStore('bis', () => {
 
   function statusOf(job: string, slotIndex: number): EquipmentStatus {
     return slots.value[job]?.[slotIndex] ?? EquipmentStatus.RAID
+  }
+
+  // The piece the slot is after, or got: Raid is the raid piece, Tome/Twine/Glaze the tome one,
+  // and Acquired keeps whichever it was before (same rule as the server)
+  function sourceOf(job: string, slotIndex: number): GearSource {
+    const status = statusOf(job, slotIndex)
+    if (status === EquipmentStatus.ACQUIRED) return sources.value[job]?.[slotIndex] ?? 'raid'
+    return status === EquipmentStatus.RAID ? 'raid' : 'tome'
   }
 
   // Other jobs sharing this slot with `job`, excluding the job itself
@@ -63,12 +75,20 @@ export const useBisStore = defineStore('bis', () => {
   async function setStatus(job: string, slotIndex: number, status: EquipmentStatus): Promise<boolean> {
     const affected = [job, ...linkedOnSlot(job, slotIndex)]
     const previous = affected.map((j) => statusOf(j, slotIndex))
+    // Read before the status changes, so Acquired picks up the source the slot had
+    const previousSources = affected.map((j) => sourceOf(j, slotIndex))
     for (const j of affected) (slots.value[j] ??= {})[slotIndex] = status
+    affected.forEach(
+      (j, i) => ((sources.value[j] ??= {})[slotIndex] = status === EquipmentStatus.ACQUIRED ? previousSources[i]! : sourceOf(j, slotIndex)),
+    )
     try {
       await apiFetch(`/bis/${job}/${slotIndex}`, { method: 'PUT', body: { status } })
       return true
     } catch (err) {
-      affected.forEach((j, i) => (slots.value[j]![slotIndex] = previous[i]!))
+      affected.forEach((j, i) => {
+        slots.value[j]![slotIndex] = previous[i]!
+        sources.value[j]![slotIndex] = previousSources[i]!
+      })
       message.error(`Couldn't save: ${errorText(err)}`)
       return false
     }
@@ -164,6 +184,7 @@ export const useBisStore = defineStore('bis', () => {
     () => auth.user?.id,
     () => {
       slots.value = {}
+      sources.value = {}
       links.value = {}
     },
   )
@@ -174,6 +195,7 @@ export const useBisStore = defineStore('bis', () => {
     loading,
     load,
     statusOf,
+    sourceOf,
     linkedOnSlot,
     isLinked,
     linkedWith,

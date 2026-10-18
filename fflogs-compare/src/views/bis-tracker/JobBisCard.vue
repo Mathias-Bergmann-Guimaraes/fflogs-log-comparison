@@ -50,6 +50,7 @@
         <equipment-slot
           :job="job"
           :status="bis.statusOf(job, i)"
+          :source="bis.sourceOf(job, i)"
           :type="slot"
           :linked-jobs="bis.linkedOnSlot(job, i)"
           :highlighted="bis.isHighlighted(job, i)"

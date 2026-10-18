@@ -99,6 +99,12 @@ const migrations: string[] = [
     PRIMARY KEY (user_id, key)
   );
   `,
+  // 6: where the slot's BiS piece comes from ('raid' or 'tome'), so an acquired slot still knows which piece it is.
+  // Already-acquired slots can't be told apart and stay 'raid'.
+  `
+  ALTER TABLE bis_slots ADD COLUMN source TEXT NOT NULL DEFAULT 'raid';
+  UPDATE bis_slots SET source = 'tome' WHERE status IN ('tome', 'twine', 'glaze');
+  `,
 ]
 
 // node:sqlite has no transaction helper; synchronous fn only, so nothing else can interleave

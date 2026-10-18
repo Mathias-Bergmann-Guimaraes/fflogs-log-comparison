@@ -6,6 +6,10 @@ import { SLOT_COUNT, allJobs, sharedSlots } from '../src/constants/gearSharing.t
 // Kept in sync by hand with EquipmentStatus in src/types/EquipmentType.ts
 const VALID_STATUSES = new Set(['raid', 'tome', 'twine', 'glaze', 'acquired'])
 
+// The piece a status is after. 'acquired' keeps the slot's current source instead (see the upsert below);
+// a slot with no row yet was on the default Raid status.
+const sourceOf = (status: string) => (status === 'tome' || status === 'twine' || status === 'glaze' ? 'tome' : 'raid')
+
 const isJob = (job: unknown): job is string => typeof job === 'string' && allJobs.includes(job)
 const isSlot = (slot: unknown): slot is number => Number.isInteger(slot) && (slot as number) >= 0 && (slot as number) < SLOT_COUNT
 
@@ -55,8 +59,8 @@ function linkSlot(userId: number, source: string, target: string, slot: number) 
 
   db.prepare('DELETE FROM bis_slots WHERE user_id = ? AND job = ? AND slot_index = ?').run(userId, target, slot)
   db.prepare(
-    `INSERT INTO bis_slots (user_id, job, slot_index, status, updated_at)
-     SELECT user_id, ?, slot_index, status, ? FROM bis_slots WHERE user_id = ? AND job = ? AND slot_index = ?`,
+    `INSERT INTO bis_slots (user_id, job, slot_index, status, source, updated_at)
+     SELECT user_id, ?, slot_index, status, source, ? FROM bis_slots WHERE user_id = ? AND job = ? AND slot_index = ?`,
   ).run(target, Date.now(), userId, source, slot)
 }
 
@@ -64,13 +68,15 @@ export const bis = new Hono<AuthEnv>()
 bis.use(requireAuth)
 
 // slots: only what the user has changed, { [job]: { [slotIndex]: status } }
+// sources: the same slots, { [job]: { [slotIndex]: 'raid' | 'tome' } }
 // links: linked slots only, { [job]: { [slotIndex]: groupId } }; same slot + same id = shared
 bis.get('/', (c) => {
   const userId = c.get('user').id
-  const slotRows = db.prepare('SELECT job, slot_index, status FROM bis_slots WHERE user_id = ?').all(userId) as {
+  const slotRows = db.prepare('SELECT job, slot_index, status, source FROM bis_slots WHERE user_id = ?').all(userId) as {
     job: string
     slot_index: number
     status: string
+    source: string
   }[]
   const linkRows = db.prepare('SELECT job, slot_index, group_id FROM slot_links WHERE user_id = ?').all(userId) as {
     job: string
@@ -79,11 +85,15 @@ bis.get('/', (c) => {
   }[]
 
   const slots: Record<string, Record<number, string>> = {}
-  for (const { job, slot_index, status } of slotRows) (slots[job] ??= {})[slot_index] = status
+  const sources: Record<string, Record<number, string>> = {}
+  for (const { job, slot_index, status, source } of slotRows) {
+    ;(slots[job] ??= {})[slot_index] = status
+    ;(sources[job] ??= {})[slot_index] = source
+  }
   const links: Record<string, Record<number, number>> = {}
   for (const { job, slot_index, group_id } of linkRows) (links[job] ??= {})[slot_index] = group_id
 
-  return c.json({ slots, links })
+  return c.json({ slots, sources, links })
 })
 
 // Writes to every job linked with :job on this slot, so linked slots can't drift apart
@@ -99,12 +109,15 @@ bis.put('/:job/:slot{[0-9]+}', async (c) => {
   if (typeof status !== 'string' || !VALID_STATUSES.has(status)) return c.json({ error: 'Invalid status' }, 400)
 
   const upsert = db.prepare(
-    `INSERT INTO bis_slots (user_id, job, slot_index, status, updated_at) VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT (user_id, job, slot_index) DO UPDATE SET status = excluded.status, updated_at = excluded.updated_at`,
+    `INSERT INTO bis_slots (user_id, job, slot_index, status, source, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT (user_id, job, slot_index) DO UPDATE SET
+       status = excluded.status,
+       source = CASE WHEN excluded.status = 'acquired' THEN bis_slots.source ELSE excluded.source END,
+       updated_at = excluded.updated_at`,
   )
   const now = Date.now()
   transaction(() => {
-    for (const j of jobsSharingSlot(userId, job, slot)) upsert.run(userId, j, slot, status, now)
+    for (const j of jobsSharingSlot(userId, job, slot)) upsert.run(userId, j, slot, status, sourceOf(status), now)
   })
 
   return c.body(null, 204)

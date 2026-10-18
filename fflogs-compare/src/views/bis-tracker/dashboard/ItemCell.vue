@@ -25,7 +25,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { gearPiece, type GearSource } from '@/constants/icons'
+import { gearPiece } from '@/constants/icons'
+import type { GearSource } from '@/types/EquipmentType'
 import { bisSlotLabels, bisSlots } from '@/constants/bisSlots'
 import { jobDisplayName } from '@/constants/jobs'
 import { useFavoritesStore } from '@/stores/favoritesStore'

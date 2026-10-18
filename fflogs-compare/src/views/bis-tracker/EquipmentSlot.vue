@@ -34,8 +34,8 @@
 </template>
 
 <script setup lang="ts">
-import { EquipmentStatus, EquipmentType, isAccessory } from '@/types/EquipmentType'
-import { equipmentStatusIcons, gearPiece, gearSourceOf } from '@/constants/icons'
+import { EquipmentStatus, EquipmentType, isAccessory, type GearSource } from '@/types/EquipmentType'
+import { equipmentStatusIcons, gearPiece } from '@/constants/icons'
 import { equipmentStatuses, statusOptionsFor } from '@/constants/equipmentStatus'
 
 import CheckIcon from './CheckIcon.vue'
@@ -45,6 +45,8 @@ import { jobDisplayName } from '@/constants/jobs'
 const props = defineProps<{
   job: string
   type: EquipmentType
+  // Which piece to show; an acquired slot remembers it
+  source: GearSource
   // Other jobs sharing this slot; changing it changes theirs too
   linkedJobs?: string[]
   // Ring shown while the pointer is over this item or a linked one
@@ -57,8 +59,7 @@ function onStatusClick({ key }: { key: string | number }) {
   status.value = key as EquipmentStatus
 }
 
-// Shows the piece this status is after: the raid one, or the tome one (also what twine/glaze upgrade)
-const piece = computed(() => gearPiece(props.job, props.type, gearSourceOf(status.value)))
+const piece = computed(() => gearPiece(props.job, props.type, props.source))
 const equipmentImage = computed(() => piece.value.icon)
 
 const title = computed(() => {
