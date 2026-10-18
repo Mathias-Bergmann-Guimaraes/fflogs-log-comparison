@@ -10,8 +10,17 @@
     </a-layout-header>
     <a-layout>
       <a-layout-sider>
-        <a-menu class="h-full" :selected-keys="[String(route.name)]" @click="onMenuClick">
-          <a-menu-item v-for="item in menuItems" :key="item.name">{{ item.meta.menuLabel }}</a-menu-item>
+        <!-- Routes with child pages (BiS Tracker) become submenus -->
+        <a-menu v-model:open-keys="openKeys" class="h-full" mode="inline" :selected-keys="[String(route.name)]" @click="onMenuClick">
+          <template v-for="item in menuItems" :key="String(item.name)">
+            <a-sub-menu v-if="item.pages.length" :key="String(item.name)" :title="item.meta.menuLabel">
+              <a-menu-item v-for="page in item.pages" :key="String(page.name)">
+                <template v-if="page.meta?.menuIcon" #icon><component :is="page.meta?.menuIcon" /></template>
+                {{ page.meta?.menuLabel }}
+              </a-menu-item>
+            </a-sub-menu>
+            <a-menu-item v-else :key="String(item.name)">{{ item.meta.menuLabel }}</a-menu-item>
+          </template>
         </a-menu>
       </a-layout-sider>
 
@@ -23,13 +32,35 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
-const menuItems = router.getRoutes().filter((r) => r.meta.menuLabel)
+// Top-level menu entries, each with its child pages (if any). Only children of a menu entry are pages of a
+// submenu; everything is a child of the layout route ('/'), which has no menu label.
+const childNames = new Set(
+  router
+    .getRoutes()
+    .filter((r) => r.meta.menuLabel)
+    .flatMap((r) => r.children.map((child) => child.name)),
+)
+const menuItems = router
+  .getRoutes()
+  .filter((r) => r.meta.menuLabel && !childNames.has(r.name))
+  .map((r) => ({ ...r, pages: r.children.filter((child) => child.meta?.menuLabel) }))
+
+// Submenus start open, and the one holding the current page is reopened when navigating into it
+const openKeys = ref(menuItems.filter((item) => item.pages.length).map((item) => String(item.name)))
+watch(
+  () => route.matched.map((r) => String(r.name)),
+  (names) => {
+    const parent = names.find((name) => menuItems.some((item) => item.pages.length && String(item.name) === name))
+    if (parent && !openKeys.value.includes(parent)) openKeys.value.push(parent)
+  },
+)
 
 auth.ensureLoaded()
 

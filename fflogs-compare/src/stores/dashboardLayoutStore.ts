@@ -6,7 +6,7 @@ import { useAuthStore } from './authStore'
 
 // Order, width and visibility of the BiS dashboard widgets.
 // Saved per account on the server; this browser keeps a copy per user so the page opens with it straight away.
-export type WidgetId = 'kpis' | 'thisWeek' | 'shopping' | 'stock' | 'burndown' | 'jobStatus' | 'raidLoot' | 'roles'
+export type WidgetId = 'kpis' | 'thisWeek' | 'shopping' | 'stock' | 'burndown' | 'jobStatus' | 'gearOverview' | 'raidLoot' | 'roles'
 
 // Column span on wide screens (out of 24); narrow screens always stack full width
 export type WidgetSpan = 8 | 12 | 16 | 24
@@ -24,6 +24,7 @@ export const widgetTitles: Record<WidgetId, string> = {
   stock: 'Your stock',
   burndown: 'Items left to buy',
   jobStatus: 'Gear status per job',
+  gearOverview: 'Gear overview',
   raidLoot: 'Who needs what',
   roles: 'By role',
 }
@@ -40,6 +41,7 @@ const defaultLayout = (): WidgetLayout[] => [
   { id: 'thisWeek', span: 8, hidden: false },
   { id: 'burndown', span: 8, hidden: false },
   { id: 'jobStatus', span: 8, hidden: false },
+  { id: 'gearOverview', span: 24, hidden: false },
   { id: 'raidLoot', span: 24, hidden: false },
   { id: 'roles', span: 24, hidden: false },
 ]

@@ -7,10 +7,7 @@
           v-if="layout.editing"
           draggable="true"
           class="flex h-full cursor-grab flex-col rounded-lg border-2 border-dashed p-2 transition-colors"
-          :class="[
-            dropTarget === widget.id ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600',
-            dragged === widget.id && 'opacity-50',
-          ]"
+          :class="[dropTarget === widget.id ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600', dragged === widget.id && 'opacity-50']"
           @dragstart="onDragStart($event, widget.id)"
           @dragover.prevent="dropTarget = widget.id"
           @dragleave="dropTarget === widget.id && (dropTarget = null)"
@@ -53,6 +50,7 @@ import BurndownChart from './BurndownChart.vue'
 import JobStatusChart from './JobStatusChart.vue'
 import RoleTable from './RoleTable.vue'
 import RaidLootCard from './RaidLootCard.vue'
+import GearOverviewCard from './GearOverviewCard.vue'
 
 const widgetComponents: Record<WidgetId, Component> = {
   kpis: KpiRow,
@@ -61,6 +59,7 @@ const widgetComponents: Record<WidgetId, Component> = {
   stock: StockCard,
   burndown: BurndownChart,
   jobStatus: JobStatusChart,
+  gearOverview: GearOverviewCard,
   raidLoot: RaidLootCard,
   roles: RoleTable,
 }
