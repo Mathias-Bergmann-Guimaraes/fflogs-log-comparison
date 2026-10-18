@@ -8,7 +8,7 @@ import 'ant-design-vue/dist/reset.css'
 
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, LineChart, ScatterChart } from 'echarts/charts'
+import { BarChart, HeatmapChart, LineChart, ScatterChart } from 'echarts/charts'
 import {
   GridComponent,
   TooltipComponent,
@@ -17,6 +17,7 @@ import {
   MarkLineComponent,
   MarkAreaComponent,
   DataZoomComponent,
+  VisualMapComponent,
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 
@@ -25,6 +26,7 @@ use([
   BarChart,
   LineChart,
   ScatterChart,
+  HeatmapChart,
   GridComponent,
   TooltipComponent,
   TitleComponent,
@@ -32,6 +34,7 @@ use([
   MarkLineComponent,
   MarkAreaComponent,
   DataZoomComponent,
+  VisualMapComponent,
 ])
 
 const app = createApp(App)

@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
 import HomeViewLayout from '@/views/HomeViewLayout.vue'
 import { markRaw, type Component } from 'vue'
-import { AppstoreOutlined, DashboardOutlined } from '@ant-design/icons-vue'
+import { AimOutlined, AppstoreOutlined, BellOutlined, DashboardOutlined, StarOutlined } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/stores/authStore'
 
 declare module 'vue-router' {
@@ -23,6 +23,20 @@ function lastBisPage() {
     // Storage unavailable: use the default
   }
   return 'bisGear'
+}
+
+// Last Hunt Tracker page opened (written by HuntTrackerView); /hunts goes back to it
+export const HUNT_PAGE_KEY = 'hunt-tracker-page'
+const HUNT_PAGES = ['huntsDashboard', 'huntsA', 'huntsS', 'huntsAll']
+
+function lastHuntPage() {
+  try {
+    const saved = localStorage.getItem(HUNT_PAGE_KEY)
+    if (saved && HUNT_PAGES.includes(saved)) return saved
+  } catch {
+    // Storage unavailable: use the default
+  }
+  return 'huntsAll'
 }
 
 const router = createRouter({
@@ -58,6 +72,41 @@ const router = createRouter({
               name: 'bisGear',
               component: () => import('@/views/bis-tracker/GearSetsView.vue'),
               meta: { menuLabel: 'Gear sets', menuIcon: markRaw(AppstoreOutlined), requiresAuth: true },
+            },
+          ],
+        },
+        {
+          path: 'hunts',
+          name: 'hunts',
+          component: () => import('@/views/hunts/HuntTrackerView.vue'),
+          meta: { menuLabel: 'Hunt Tracker', requiresAuth: true },
+          redirect: () => ({ name: lastHuntPage() }),
+          children: [
+            {
+              path: 'dashboard',
+              name: 'huntsDashboard',
+              component: () => import('@/views/hunts/dashboard/HuntDashboard.vue'),
+              meta: { menuLabel: 'Train dashboard', menuIcon: markRaw(DashboardOutlined), requiresAuth: true },
+            },
+            {
+              path: 'a-rank',
+              name: 'huntsA',
+              component: () => import('@/views/hunts/HuntsView.vue'),
+              props: { rank: 'A' },
+              meta: { menuLabel: 'EU A-Rank', menuIcon: markRaw(AimOutlined), requiresAuth: true },
+            },
+            {
+              path: 's-rank',
+              name: 'huntsS',
+              component: () => import('@/views/hunts/HuntsView.vue'),
+              props: { rank: 'S' },
+              meta: { menuLabel: 'EU S-Rank', menuIcon: markRaw(StarOutlined), requiresAuth: true },
+            },
+            {
+              path: 'all',
+              name: 'huntsAll',
+              component: () => import('@/views/hunts/HuntsView.vue'),
+              meta: { menuLabel: 'All notifications', menuIcon: markRaw(BellOutlined), requiresAuth: true },
             },
           ],
         },

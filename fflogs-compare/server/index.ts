@@ -7,6 +7,7 @@ import { type AuthEnv, currentUser, endSession, hashPassword, purgeExpiredSessio
 import { google, googleEnabled } from './google.ts'
 import { bis } from './bis.ts'
 import { settings } from './settings.ts'
+import { hunts, startHuntSync } from './hunts.ts'
 
 const PORT = Number(process.env.PORT ?? 3000)
 
@@ -14,8 +15,10 @@ const USERNAME_RE = /^[\w.-]{3,32}$/
 
 const api = new Hono<AuthEnv>()
 
-// Rejects cross-site form posts; the session cookie is SameSite=Lax as a second layer
-api.use(csrf())
+// Rejects cross-site form posts; the session cookie is SameSite=Lax as a second layer.
+// Skipped for the hunt ingest routes: they're called by a bot with a bearer secret, which browsers never attach on their own.
+const csrfCheck = csrf()
+api.use((c, next) => (c.req.path.startsWith('/api/hunts/ingest') ? next() : csrfCheck(c, next)))
 
 // --- Auth ---
 
@@ -79,6 +82,7 @@ api.get('/auth/me', (c) => {
 
 api.route('/bis', bis)
 api.route('/settings', settings)
+api.route('/hunts', hunts)
 
 // --- App ---
 
@@ -94,6 +98,7 @@ if (process.env.NODE_ENV === 'production') {
 
 purgeExpiredSessions()
 setInterval(purgeExpiredSessions, 60 * 60 * 1000).unref()
+startHuntSync()
 
 serve({ fetch: app.fetch, port: PORT }, (info) => {
   console.log(`API listening on http://localhost:${info.port}`)

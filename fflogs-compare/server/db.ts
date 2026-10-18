@@ -105,6 +105,28 @@ const migrations: string[] = [
   ALTER TABLE bis_slots ADD COLUMN source TEXT NOT NULL DEFAULT 'raid';
   UPDATE bis_slots SET source = 'tome' WHERE status IN ('tome', 'twine', 'glaze');
   `,
+  // 7: hunt messages copied from a Discord channel (server/hunts.ts). Shared by all users, not per user.
+  // id is the Discord snowflake; created_at is derived from it. embeds/attachments/pings are JSON arrays.
+  `
+  CREATE TABLE hunt_messages (
+    id          TEXT PRIMARY KEY,
+    author_name TEXT NOT NULL,
+    author_icon TEXT,
+    content     TEXT NOT NULL,
+    embeds      TEXT NOT NULL,
+    attachments TEXT NOT NULL,
+    pings       TEXT NOT NULL,
+    created_at  INTEGER NOT NULL,
+    edited_at   INTEGER
+  );
+  CREATE INDEX hunt_messages_created ON hunt_messages (created_at DESC);
+  `,
+  // 8: which Discord channel a hunt message came from. channel_name is whatever the pushing bot sends along
+  // (raw Discord messages only carry the id); both are null for messages stored before this.
+  `
+  ALTER TABLE hunt_messages ADD COLUMN channel_id TEXT;
+  ALTER TABLE hunt_messages ADD COLUMN channel_name TEXT;
+  `,
 ]
 
 // node:sqlite has no transaction helper; synchronous fn only, so nothing else can interleave
