@@ -137,6 +137,11 @@ export const useBisStore = defineStore('bis', () => {
     return Object.keys(slots.value[job] ?? {}).length > 0
   }
 
+  // Every BiS item acquired
+  function isComplete(job: string) {
+    return bisSlots.every((_, i) => statusOf(job, i) === EquipmentStatus.ACQUIRED)
+  }
+
   // Raid items still needed across tracked `jobs`, with the floor that drops them
   function raidPieces(jobs: readonly string[]): { job: string; slot: number; floor: RaidFloor }[] {
     return uniqueSlots(jobs.filter(isTracked), (job, slot) => statusOf(job, slot) === EquipmentStatus.RAID).flatMap((p) => {
@@ -203,6 +208,7 @@ export const useBisStore = defineStore('bis', () => {
     saveLinks,
     neededPieces,
     isTracked,
+    isComplete,
     raidPieces,
     booksNeeded,
     materialsNeeded,

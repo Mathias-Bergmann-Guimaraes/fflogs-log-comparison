@@ -50,6 +50,12 @@ const option = computed<EChartsOption>(() => ({
     type: 'category',
     data: jobs.value.map((job) => (favorites.isFavorite(job) ? `★ ${jobDisplayName(job)}` : jobDisplayName(job))),
     ...axisStyle,
+    // Finished jobs read green with a check, so they stand out from the full-but-not-done bars
+    axisLabel: {
+      ...axisStyle.axisLabel,
+      formatter: (label: string, index: number) => (bis.isComplete(jobs.value[index]!) ? `{done|✓ ${label}}` : label),
+      rich: { done: { color: statusColors.acquired, fontWeight: 'bold' } },
+    },
     splitLine: { show: false },
   },
   series: series.value.map((s) => ({

@@ -7,16 +7,22 @@
         <div v-for="group in jobsByRole" :key="group.role" class="max-w-full min-w-0">
           <a-typography-text type="secondary" class="mb-1.5 block text-xs">{{ group.role }}</a-typography-text>
           <div class="flex flex-wrap gap-1.5 @[32rem]:gap-2">
-            <!-- One tile per job. Untracked jobs (nothing changed yet) are dimmed: they'd otherwise read as all Raid. -->
+            <!-- One tile per job. Untracked jobs (nothing changed yet) are dimmed: they'd otherwise read as all Raid.
+                 Finished sets get a green tint and a check badge; favorites keep their gold ring. -->
             <a-tooltip v-for="job in group.jobs" :key="job" :title="tileHint(job)">
               <!-- Opens this job's gear set on the Gear sets page -->
               <button
                 type="button"
-                class="relative flex cursor-pointer items-center gap-1.5 rounded-md bg-gray-800/60 p-1 transition hover:ring-2 hover:ring-blue-500 @[32rem]:gap-2 @[32rem]:p-1.5"
-                :class="[!bis.isTracked(job) && 'opacity-35', favorites.isFavorite(job) && 'ring-2 ring-amber-400']"
+                class="relative flex cursor-pointer items-center gap-1.5 rounded-md p-1 transition hover:ring-2 hover:ring-blue-500 @[32rem]:gap-2 @[32rem]:p-1.5"
+                :class="[
+                  bis.isComplete(job) ? 'bg-green-500/20' : 'bg-gray-800/60',
+                  !bis.isTracked(job) && 'opacity-35',
+                  favorites.isFavorite(job) ? 'ring-2 ring-amber-400' : bis.isComplete(job) && 'ring-2 ring-green-500',
+                ]"
                 @click="router.push({ name: 'bisGear', query: { job } })"
               >
                 <star-filled v-if="favorites.isFavorite(job)" class="absolute -top-1.5 -left-1.5 text-xs text-amber-400" />
+                <check-circle-filled v-if="bis.isComplete(job)" class="absolute -top-1.5 -right-1.5 rounded-full bg-gray-900 text-sm text-green-500" />
                 <!-- Job icons are 76px: 38px is exactly half -->
                 <img :src="`/job/${job}.png`" :alt="jobDisplayName(job)" class="size-9.5 rounded-sm" />
                 <!-- Column by column like JobBisCard: armour on the left, accessories on the right.
@@ -49,7 +55,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { StarFilled } from '@ant-design/icons-vue'
+import { CheckCircleFilled, StarFilled } from '@ant-design/icons-vue'
 import { EquipmentStatus } from '@/types/EquipmentType'
 import { bisSlotLabels, bisSlots } from '@/constants/bisSlots'
 import { equipmentStatuses } from '@/constants/equipmentStatus'
@@ -100,6 +106,7 @@ function tileHint(job: string) {
     .map(([n, label]) => `${n} ${label}`)
   const have = count(EquipmentStatus.ACQUIRED)
   const name = favorites.isFavorite(job) ? `${jobDisplayName(job)} (favorite)` : jobDisplayName(job)
-  return `${name}: ${have}/${bisSlots.length}${left.length ? ` · ${left.join(', ')}` : ' · BiS done'}. Click to open its gear set`
+  if (bis.isComplete(job)) return `${name}: BiS complete! Click to open its gear set`
+  return `${name}: ${have}/${bisSlots.length} · ${left.join(', ')}. Click to open its gear set`
 }
 </script>

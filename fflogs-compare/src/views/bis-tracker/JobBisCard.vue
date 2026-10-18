@@ -1,9 +1,13 @@
 <template>
-  <!-- Favorites get a gold border, matching the star -->
+  <!-- Favorites get a gold border, matching the star; a finished set goes green (the star still marks a favorite) -->
   <a-card
     size="small"
     class="w-56"
-    :class="favorite && 'border-amber-400! shadow-[0_0_12px_rgba(251,191,36,0.25)]'"
+    :class="
+      complete
+        ? 'border-green-500! bg-green-500/5! shadow-[0_0_12px_rgba(34,197,94,0.3)]'
+        : favorite && 'border-amber-400! shadow-[0_0_12px_rgba(251,191,36,0.25)]'
+    "
     :body-style="{ padding: '8px 12px 12px' }"
   >
     <template #title>
@@ -21,9 +25,13 @@
           </template>
         </a-button>
       </a-tooltip>
-      <a-tag :color="acquiredCount === bisSlots.length ? 'success' : undefined" class="m-0! tabular-nums">
-        {{ acquiredCount }}/{{ bisSlots.length }}
-      </a-tag>
+      <a-tooltip v-if="complete" title="Every BiS item acquired">
+        <a-tag color="success" class="m-0!">
+          <template #icon><check-circle-filled /></template>
+          Done
+        </a-tag>
+      </a-tooltip>
+      <a-tag v-else class="m-0! tabular-nums">{{ acquiredCount }}/{{ bisSlots.length }}</a-tag>
     </template>
 
     <!-- Always rendered at the same height, so linked and unlinked cards' gear lines up -->
@@ -91,7 +99,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { LinkOutlined, StarFilled, StarOutlined } from '@ant-design/icons-vue'
+import { CheckCircleFilled, LinkOutlined, StarFilled, StarOutlined } from '@ant-design/icons-vue'
 import EquipmentSlot from './EquipmentSlot.vue'
 import LinkGearDialog from './LinkGearDialog.vue'
 import FloorBook from './FloorBook.vue'
@@ -114,6 +122,7 @@ const favorite = computed(() => favorites.isFavorite(props.job))
 const dialogOpen = ref(false)
 
 const acquiredCount = computed(() => bisSlots.filter((_, i) => bis.statusOf(props.job, i) === EquipmentStatus.ACQUIRED).length)
+const complete = computed(() => bis.isComplete(props.job))
 
 const displayName = computed(() => jobDisplayName(props.job))
 const jobIconPath = (job: string) => `/job/${job}.png`
