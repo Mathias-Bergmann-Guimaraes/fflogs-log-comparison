@@ -54,7 +54,7 @@ Vite proxies `/api` to it.
   frontend. Set the OAuth consent screen to *In production*: in *Testing* only manually added test
   users can log in.
 
-- **Hunt Tracker (optional)**: the *Hunt Tracker* page shows the messages of one Discord channel,
+- **Hunt Tracker (optional)**: only for accounts it's switched on for (see [Admin page](#admin-page)). The *Hunt Tracker* page shows the messages of one Discord channel,
   stored by [`server/hunts.ts`](fflogs-compare/server/hunts.ts). Messages reach it in one of two
   ways:
 
@@ -123,11 +123,11 @@ Vite proxies `/api` to it.
   your own bot is a member of the server holding the channel. Turn on **Message Content Intent** for
   it in the developer portal, or message text comes through empty.
 
-  Messages from S rank channels are hidden 10 minutes after they were posted. They aren't deleted.
+  Only the 20 newest messages from S rank channels are shown; older ones are hidden, not deleted.
   A channel counts as S rank when its name contains "s-rank" (`chaos-s-ranks`) or starts with "S"
   plus a separator (`S Light`). It counts as A rank on the same rule with "a", or when the name
   contains "train" (`light-trains`). The rules are `RANK_PATTERNS` in `server/hunts.ts`, and they
-  also decide what the EU A-Rank and EU S-Rank pages show. Change the time with `HUNT_S_RANK_MINUTES`.
+  also decide what the EU A-Rank and EU S-Rank pages show. Change the count with `S_RANK_KEEP`.
 
   Either way, role pings come through as raw ids. Name them with the page's *Name pings* button.
 
@@ -149,7 +149,7 @@ Run all of these from `fflogs-compare/`.
 
 | Script | What it does |
 | --- | --- |
-| `npm run dev` | Vite dev server (HMR + Vue DevTools) and the API server in watch mode |
+| `npm run dev` | Vite dev server (HMR + Vue DevTools), the admin page's Vite server on 5174, and the API server in watch mode |
 | `npm run codegen` | Regenerates `src/api/__generated__/graphql.ts` from the live schema |
 | `npm run build` | Type-check and production build (parallel, via `npm-run-all2`) |
 | `npm run build-only` | Production build, skipping type-check |
@@ -157,7 +157,8 @@ Run all of these from `fflogs-compare/`.
 | `npm run lint` | `oxlint --fix` then `eslint --fix` |
 | `npm run format` | Prettier over `src/` |
 | `npm run preview` | Serves the built `dist/` locally (no API, so login won't work) |
-| `npm start` | Production server: API plus the built `dist/`, one process |
+| `npm start` | Production server: API plus the built `dist/`, and the admin server on `127.0.0.1:3001`, one process |
+| `npm run admin -- …` | Admin from a shell on the server: `users`, `enable <username> <feature>`, `disable <username> <feature>` |
 
 ## Deploying
 
@@ -175,6 +176,40 @@ NODE_ENV=production PORT=3000 DB_PATH=/var/lib/ffxiv-companion/app.db npm start
 - Run it under systemd, pm2, or similar so it restarts on crash and reboot.
 - Set `APP_URL` to the public HTTPS origin, or Google will reject the redirect URI.
 - `.env`'s FF Logs secret is still bundled into the frontend at build time; see Gotchas.
+
+## Admin page
+
+[`server/admin.ts`](fflogs-compare/server/admin.ts) is a second server in the same process: a list of every
+account, with switches for features only some accounts get, plus log out everywhere, set password and delete.
+It has **no login**. It's private because it listens on `127.0.0.1:3001` only, which nothing outside the machine
+can reach. To use it, open an SSH tunnel from your own computer and browse to it:
+
+```sh
+ssh -L 3001:localhost:3001 you@your-server
+# then open http://localhost:3001
+```
+
+Rules for keeping it private:
+
+- **Never forward it.** No reverse proxy entry (nginx, Caddy, Cloudflare Tunnel) and no firewall rule for 3001.
+  Don't move these routes onto the public app with an "is it localhost" check: behind a proxy, every public
+  request arrives from 127.0.0.1.
+- It answers only requests whose `Host` is `localhost`, `127.0.0.1` or `[::1]` (against DNS rebinding) and runs
+  Hono's CSRF check.
+- `ADMIN_PORT` (default `3001`) and `ADMIN_HOST` (default `127.0.0.1`) change where it listens. Only change
+  `ADMIN_HOST` inside a container: `ADMIN_HOST=0.0.0.0` there, and publish it as `127.0.0.1:3001:3001`, never
+  `3001:3001`.
+- The page is built separately (`vite.admin.config.ts` → `dist-admin/`, part of `npm run build`), so the public
+  server has no copy of it.
+
+**Per-user features.** `FEATURES` in [`server/features.ts`](fflogs-compare/server/features.ts) lists them (only
+`hunts` so far), and table `user_features` holds who has what. An account without a feature doesn't see it at
+all: the menu entry is gone, the route redirects home, and its API answers 404 (`requireFeature`). To gate
+another feature, add its name to `FEATURES`, put `requireFeature('<name>')` on its routes, and give its route
+`meta.feature`. The admin page shows a column for it automatically; add a label in `FEATURE_LABELS` in
+[`src/admin/AdminApp.vue`](fflogs-compare/src/admin/AdminApp.vue).
+
+Without a tunnel, the CLI does the main things: `npm run admin -- users`, `npm run admin -- enable alice hunts`.
 
 ## Stack
 
