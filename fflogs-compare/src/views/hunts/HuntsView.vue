@@ -287,12 +287,9 @@ loadLabels()
 loadMeta().catch((err) => console.error("Couldn't load hunt meta", err))
 loadFirst()
 
-// Ticks faster than the refresh, so S rank messages vanish close to when they expire
+// Ticks faster than the refresh, so relative times stay current
 function tick() {
   now.value = Date.now()
-  if (messages.value.some((m) => m.expiresAt !== null && m.expiresAt <= now.value)) {
-    messages.value = messages.value.filter((m) => m.expiresAt === null || m.expiresAt > now.value)
-  }
 }
 
 const timers = [setInterval(refresh, REFRESH_MS), setInterval(tick, 5_000)]

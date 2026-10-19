@@ -32,8 +32,6 @@ export type HuntMessage = {
   pings: HuntPing[]
   createdAt: number
   editedAt: number | null
-  // When the page should stop showing it (S rank messages only), null if it stays
-  expiresAt: number | null
 }
 
 // GET /api/hunts?before=<message id>&ping=<ping>&channel=<channel id>&rank=<A|S>

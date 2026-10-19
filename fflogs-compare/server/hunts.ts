@@ -12,8 +12,9 @@ const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
 const CHANNEL_ID = process.env.DISCORD_HUNT_CHANNEL_ID
 const POLL_MS = Math.max(5, Number(process.env.DISCORD_POLL_SECONDS ?? 20)) * 1000
 const INGEST_SECRET = process.env.HUNT_INGEST_SECRET
-// S rank spawns are only worth showing briefly; their messages are hidden (not deleted) after this long
-const S_RANK_TTL_MS = Math.max(1, Number(process.env.HUNT_S_RANK_MINUTES ?? 10)) * 60_000
+// S rank spawns are only worth showing while recent: only the newest this many are shown, older ones are
+// hidden (not deleted)
+const S_RANK_KEEP = 20
 
 const pollEnabled = Boolean(BOT_TOKEN && CHANNEL_ID)
 // Short secrets are ignored rather than accepted, so a placeholder value can't open the endpoint
@@ -216,7 +217,7 @@ function channelIdsByRank(): Record<HuntRank, string[]> {
 const parseRank = (rank: string | undefined): HuntRank | null => (rank === 'A' || rank === 'S' ? rank : null)
 const placeholders = (values: unknown[]) => values.map(() => '?').join(', ')
 
-const toMessage = (r: Row, sRankIds: string[]): HuntMessage => ({
+const toMessage = (r: Row): HuntMessage => ({
   id: r.id,
   channelId: r.channel_id,
   channelName: r.channel_name,
@@ -228,7 +229,6 @@ const toMessage = (r: Row, sRankIds: string[]): HuntMessage => ({
   pings: JSON.parse(r.pings),
   createdAt: r.created_at,
   editedAt: r.edited_at,
-  expiresAt: r.channel_id && sRankIds.includes(r.channel_id) ? r.created_at + S_RANK_TTL_MS : null,
 })
 
 // --- Push ---
@@ -304,7 +304,7 @@ hunts.use(requireAuth)
 // Newest first. ?before=<message id> for the next page, ?after=<message id> for anything newer (one page, oldest
 // dropped if there's more), ?ping=<ping> (repeatable) to keep only messages with any of those pings,
 // ?channel=<channel id> (repeatable) to keep only those channels. Both filters together must both match.
-// ?rank=A|S keeps only that rank's channels. S rank messages older than S_RANK_TTL_MS are always left out.
+// ?rank=A|S keeps only that rank's channels. S rank messages past the newest S_RANK_KEEP are always left out.
 hunts.get('/', (c) => {
   const before = c.req.query('before')
   const after = c.req.query('after')
@@ -337,8 +337,11 @@ hunts.get('/', (c) => {
     params.push(...rankIds[rank])
   }
   if (rankIds.S.length) {
-    where.push(`(channel_id IS NULL OR channel_id NOT IN (${placeholders(rankIds.S)}) OR created_at >= ?)`)
-    params.push(...rankIds.S, Date.now() - S_RANK_TTL_MS)
+    const sIn = `channel_id IN (${placeholders(rankIds.S)})`
+    where.push(
+      `(channel_id IS NULL OR NOT ${sIn} OR id IN (SELECT id FROM hunt_messages WHERE ${sIn} ORDER BY created_at DESC, id DESC LIMIT ${S_RANK_KEEP}))`,
+    )
+    params.push(...rankIds.S, ...rankIds.S)
   }
 
   const rows = db
@@ -348,7 +351,7 @@ hunts.get('/', (c) => {
     )
     .all(...params) as Row[]
 
-  const page: HuntPage = { messages: rows.slice(0, PAGE_SIZE).map((r) => toMessage(r, rankIds.S)), hasMore: rows.length > PAGE_SIZE }
+  const page: HuntPage = { messages: rows.slice(0, PAGE_SIZE).map(toMessage), hasMore: rows.length > PAGE_SIZE }
   return c.json(page)
 })
 
