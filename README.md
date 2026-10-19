@@ -54,6 +54,89 @@ Vite proxies `/api` to it.
   frontend. Set the OAuth consent screen to *In production*: in *Testing* only manually added test
   users can log in.
 
+- **Hunt Tracker (optional)**: the *Hunt Tracker* page shows the messages of one Discord channel,
+  stored by [`server/hunts.ts`](fflogs-compare/server/hunts.ts). Messages reach it in one of two
+  ways:
+
+  **Push (a bot that can see the channel sends them to us).** Set a long random secret:
+
+  ```ini
+  # At least 16 characters, e.g. from: node -e "console.log(crypto.randomUUID())"
+  HUNT_INGEST_SECRET=...
+  ```
+
+  The bot sends Discord's raw message object, the `d` of a `MESSAGE_CREATE` or `MESSAGE_UPDATE`
+  gateway event, with an `Authorization: Bearer <secret>` header:
+
+  - `POST /api/hunts/ingest` with one message, or an array of them for a backfill. Sending a
+    message again replaces it, which is how edits work.
+  - `DELETE /api/hunts/ingest/<message id>` removes a deleted message.
+
+  With discord.py, for example. It uses the raw gateway events, so the bot sends exactly what
+  Discord sent:
+
+  ```python
+  import json
+  import os
+
+  import aiohttp
+
+  # Channel IDs as strings: raw gateway data has them as strings, not ints
+  HUNT_CHANNELS = {'...', '...'}
+  INGEST_URL = 'http://localhost:3000/api/hunts/ingest'
+
+  # enable_debug_events=True is what makes on_socket_raw_receive fire
+  bot = commands.Bot(command_prefix='!', intents=intents, enable_debug_events=True)
+
+  session: aiohttp.ClientSession | None = None
+
+  async def send(method, path='', body=None):
+      global session
+      if session is None:
+          session = aiohttp.ClientSession(headers={'Authorization': f"Bearer {os.environ['HUNT_INGEST_SECRET']}"})
+      try:
+          async with session.request(method, INGEST_URL + path, json=body) as res:
+              if res.status >= 400:
+                  print('Hunt ingest failed:', res.status, await res.text())
+      except aiohttp.ClientError as e:
+          print('Hunt ingest failed:', e)
+
+  @bot.listen('on_socket_raw_receive')
+  async def forward_hunts(msg):
+      event = json.loads(msg)
+      t, d = event.get('t'), event.get('d')
+      if not isinstance(d, dict) or d.get('channel_id') not in HUNT_CHANNELS:
+          return
+      if t in ('MESSAGE_CREATE', 'MESSAGE_UPDATE'):
+          # channel_name isn't part of Discord's message; it's what the page shows and filters by
+          channel = bot.get_channel(int(d['channel_id']))
+          await send('POST', body={**d, 'channel_name': channel.name if channel else None})
+      elif t == 'MESSAGE_DELETE':
+          await send('DELETE', f"/{d['id']}")
+  ```
+
+  `MESSAGE_UPDATE` can carry a partial message, such as an embed-only update. A partial without
+  `author` is rejected with a 400, which is harmless.
+
+  **Poll (we read the channel ourselves).** Set `DISCORD_BOT_TOKEN` and
+  `DISCORD_HUNT_CHANNEL_ID`, and optionally `DISCORD_POLL_SECONDS` (default 20). This only works if
+  your own bot is a member of the server holding the channel. Turn on **Message Content Intent** for
+  it in the developer portal, or message text comes through empty.
+
+  Messages from S rank channels are hidden 10 minutes after they were posted. They aren't deleted.
+  A channel counts as S rank when its name contains "s-rank" (`chaos-s-ranks`) or starts with "S"
+  plus a separator (`S Light`). It counts as A rank on the same rule with "a", or when the name
+  contains "train" (`light-trains`). The rules are `RANK_PATTERNS` in `server/hunts.ts`, and they
+  also decide what the EU A-Rank and EU S-Rank pages show. Change the time with `HUNT_S_RANK_MINUTES`.
+
+  Either way, role pings come through as raw ids. Name them with the page's *Name pings* button.
+
+  The *Train dashboard* page reads the A rank posts: the world is the first bracketed EU world in the
+  text (`**[Twintania]** Hunt train starting …`), the start time is the post's `<t:…>` timestamp, and
+  the expansion comes from the role ping. Name the expansion roles `7.0`, `6.0`, `5.0` and `Old` (or
+  `Dawntrail`, `EW`, `ShB`, …; see `TRAIN_TYPES` in
+  [`trains.ts`](fflogs-compare/src/views/hunts/dashboard/trains.ts)) for the dashboard to tell them apart.
+
 > [!IMPORTANT]
 > `npm run codegen` is **not** optional on a fresh clone. The generated file
 > `src/api/__generated__/graphql.ts` is gitignored, and nothing type-checks or builds without it.

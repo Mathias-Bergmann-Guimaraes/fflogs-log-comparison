@@ -28,16 +28,23 @@
                 />
                 <!-- Job icons are 76px: 38px is exactly half -->
                 <img :src="`/job/${job}.png`" :alt="jobDisplayName(job)" class="size-9.5 rounded-sm" />
-                <!-- Column by column like JobBisCard: armour on the left, accessories on the right.
-                     Small dots on narrow cards (5 rows of 6px + gaps = the icon's 38px), bigger from 32rem. -->
-                <div class="grid grid-flow-col grid-rows-5 gap-x-0.75 gap-y-0.5 @[32rem]:gap-x-1">
+                <!-- The weapon is a bar across the top; under it, column by column like JobBisCard: armour on the left,
+                     accessories on the right. Small dots on narrow cards, bigger from 32rem. -->
+                <div class="flex flex-col gap-0.5 @[32rem]:gap-1">
                   <span
-                    v-for="(_, slot) in bisSlots"
-                    :key="slot"
-                    class="size-1.5 rounded-full @[32rem]:size-2"
-                    :style="{ backgroundColor: colorOf(bis.statusOf(job, slot)) }"
-                    :aria-label="`${bisSlotLabels[slot]}: ${equipmentStatuses[bis.statusOf(job, slot)].label}`"
+                    class="h-1.5 w-full rounded-full @[32rem]:h-2"
+                    :style="{ backgroundColor: colorOf(bis.statusOf(job, WEAPON_SLOT)) }"
+                    :aria-label="slotLabel(job, WEAPON_SLOT)"
                   />
+                  <div class="grid grid-flow-col grid-rows-5 gap-x-0.75 gap-y-0.5 @[32rem]:gap-x-1">
+                    <span
+                      v-for="slot in GEAR_SLOTS"
+                      :key="slot"
+                      class="size-1.5 rounded-full @[32rem]:size-2"
+                      :style="{ backgroundColor: colorOf(bis.statusOf(job, slot)) }"
+                      :aria-label="slotLabel(job, slot)"
+                    />
+                  </div>
                 </div>
               </button>
             </a-tooltip>
@@ -59,7 +66,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { CheckCircleFilled, StarFilled } from '@ant-design/icons-vue'
-import { EquipmentStatus } from '@/types/EquipmentType'
+import { EquipmentStatus, EquipmentType } from '@/types/EquipmentType'
 import { bisSlotLabels, bisSlots } from '@/constants/bisSlots'
 import { equipmentStatuses } from '@/constants/equipmentStatus'
 import { jobDisplayName, jobsByRole } from '@/constants/jobs'
@@ -70,6 +77,14 @@ import { statusColors } from './chartTheme'
 const bis = useBisStore()
 const favorites = useFavoritesStore()
 const router = useRouter()
+
+// The weapon gets its own bar above the dots; everything else stays in the armour/accessory columns
+const WEAPON_SLOT = bisSlots.indexOf(EquipmentType.WEAPON)
+const GEAR_SLOTS = bisSlots.map((_, slot) => slot).filter((slot) => slot !== WEAPON_SLOT)
+
+function slotLabel(job: string, slot: number) {
+  return `${bisSlotLabels[slot]}: ${equipmentStatuses[bis.statusOf(job, slot)].label}`
+}
 
 // Same blue/green/orange as the dashboard charts; raid is purple here
 const RAID_COLOR = '#9b6ce0'
