@@ -183,9 +183,6 @@ export function respawnState(last: Train | null, now: number): Respawn {
   return { phase: 'open' }
 }
 
-// A train can start there now (respawned or partly respawned)
-export const canStart = (r: Respawn) => r.phase === 'unseen' || r.phase === 'open' || r.phase === 'window'
-
 export const lastKey =(world: string, type: TrainTypeKey) => `${world}|${type}`
 
 // Latest train per world and type; an announced train that hasn't started yet counts as the latest
