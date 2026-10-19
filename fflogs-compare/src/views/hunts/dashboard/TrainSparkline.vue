@@ -20,14 +20,12 @@
 import { computed } from 'vue'
 import type { EChartsOption } from 'echarts'
 import { SURFACE, tooltipStyle } from '@/views/bis-tracker/dashboard/chartTheme'
-import type { DataCenterName, Train } from './trains'
+import { DC_COLORS, type DataCenterName, type Train } from './trains'
 
 const props = defineProps<{ trains: Train[]; now: number }>()
 
 const HOUR_MS = 3_600_000
 const HOURS = 24
-// Light gold, Chaos purple; checked as a pair against the dark card surface with the dataviz validator
-const DC_COLORS: Record<DataCenterName, string> = { Light: '#b98c0c', Chaos: '#9b72f0' }
 const DCS = Object.keys(DC_COLORS) as DataCenterName[]
 
 const recent = computed(() => props.trains.filter((t) => t.startsAt <= props.now && t.startsAt > props.now - HOURS * HOUR_MS))

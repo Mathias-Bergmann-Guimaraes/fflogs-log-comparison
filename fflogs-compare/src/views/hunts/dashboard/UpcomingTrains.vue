@@ -29,6 +29,16 @@
             <a-typography-text v-else type="secondary">Starting point not in the post</a-typography-text>
           </div>
 
+          <div v-if="train.speed" class="mt-2 flex items-start gap-2">
+            <component :is="speedIcon(train.speed)" class="mt-1 text-gray-400" />
+            <div>
+              <span class="font-medium">{{ train.speed.kind ? SPEED_LABELS[train.speed.kind] : train.speed.text }}</span>
+              <a-typography-text v-if="train.speed.kind && train.speed.text.toLowerCase() !== SPEED_LABELS[train.speed.kind].toLowerCase()" type="secondary" class="ms-2 text-xs">
+                "{{ train.speed.text }}"
+              </a-typography-text>
+            </div>
+          </div>
+
           <div class="mt-2 flex items-start gap-2">
             <GiftOutlined class="mt-1 text-gray-400" />
             <div>
@@ -56,17 +66,21 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { EnvironmentOutlined, GiftOutlined } from '@ant-design/icons-vue'
+import { CoffeeOutlined, DashboardOutlined, EnvironmentOutlined, GiftOutlined, ThunderboltOutlined } from '@ant-design/icons-vue'
 import { currencyIcons } from '@/constants/icons'
 import { pingColor, pingLabel, relativeTime } from '../discordText'
-import { TRAIN_TYPES, isActive, trainRewards, trainTypeOfLabel, type Train } from './trains'
+import { TRAIN_TYPES, isActive, trainRewards, trainTypeOfLabel, type SpeedKind, type Train, type TrainSpeed } from './trains'
 
 const props = defineProps<{ trains: Train[]; now: number; labels: Record<string, string> }>()
 
 // Soonest first: running ones (oldest start on top), then announced
 const active = computed(() => props.trains.filter((t) => isActive(t, props.now)).sort((a, b) => a.startsAt - b.startsAt))
 
-const startText = (train: Train) => (train.startsAt <= props.now ? `Started ${relativeTime(train.startsAt, props.now)}` : `Starts ${relativeTime(train.startsAt, props.now)}`)
+const SPEED_LABELS: Record<SpeedKind, string> = { fast: 'Fast', fastish: 'Fast-ish', slow: 'Slow' }
+// Fast a lightning bolt, fast-ish a speedometer, slow a coffee (chill); an unrecognised "Speed: …" the speedometer too
+const speedIcon = (speed: TrainSpeed) => (speed.kind === 'fast' ? ThunderboltOutlined : speed.kind === 'slow' ? CoffeeOutlined : DashboardOutlined)
+
+const startText =(train: Train) => (train.startsAt <= props.now ? `Started ${relativeTime(train.startsAt, props.now)}` : `Starts ${relativeTime(train.startsAt, props.now)}`)
 
 // The expansion of each role ping, in the ping's colour (as on the A-Rank page); unnamed pings show as they are
 function expansionTags(train: Train) {

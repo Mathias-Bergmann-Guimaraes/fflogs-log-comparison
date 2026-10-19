@@ -9,6 +9,14 @@ export const DATA_CENTERS = [
 
 export type DataCenterName = (typeof DATA_CENTERS)[number]['name']
 
+// Light gold, Chaos purple; checked as a pair against the dark card surface with the dataviz validator
+export const DC_COLORS: Record<DataCenterName, string> = { Light: '#b98c0c', Chaos: '#9b72f0' }
+
+// The DC a channel is for, from its name ("#light-trains", "chaos_trains")
+export function dcOfChannel(name: string | null | undefined): DataCenterName | null {
+  return DATA_CENTERS.find((dc) => name?.toLowerCase().includes(dc.name.toLowerCase()))?.name ?? null
+}
+
 const WORLDS = new Map<string, { world: string; dc: DataCenterName }>(
   DATA_CENTERS.flatMap((dc) => dc.worlds.map((world) => [world.toLowerCase(), { world, dc: dc.name }] as const)),
 )
@@ -60,6 +68,7 @@ export type Train = {
   // Marks per expansion, and whether the post said so (otherwise DEFAULT_MARKS)
   marks: number
   marksGiven: boolean
+  speed: TrainSpeed | null
   content: string
 }
 
@@ -77,11 +86,26 @@ export function parseWorld(content: string) {
 // A start time more than this far from the post is a typo or a different timestamp, not the train's start
 const MAX_START_OFFSET_MS = 2 * 24 * 3_600_000
 
+// "xx:23" one this long before the post still means this hour's :23 (a late "starting xx:23" post), not the next hour's
+const MINUTE_GRACE_MS = 5 * 60_000
+
+// "Starting xx:23": the first :23 after the post. Hours are in whole UTC hours, so this works in any timezone
+// that is a whole number of hours from UTC (all of the EU).
+function parseMinuteOfHour(content: string, postedAt: number) {
+  const minute = /\bxx\s*:\s*([0-5]\d)\b/i.exec(content)?.[1]
+  if (minute === undefined) return null
+  const hour = Math.floor(postedAt / 3_600_000) * 3_600_000
+  const at = hour + Number(minute) * 60_000
+  return at < postedAt - MINUTE_GRACE_MS ? at + 3_600_000 : at
+}
+
 // The train's start, and whether the post gave one (otherwise it's the posting time)
 export function parseStart(content: string, postedAt: number) {
   const unix = /<t:(\d+)(?::[tTdDfFR])?>/.exec(content)?.[1]
   const ms = unix ? Number(unix) * 1000 : NaN
-  return Number.isFinite(ms) && Math.abs(ms - postedAt) <= MAX_START_OFFSET_MS ? { at: ms, given: true } : { at: postedAt, given: false }
+  if (Number.isFinite(ms) && Math.abs(ms - postedAt) <= MAX_START_OFFSET_MS) return { at: ms, given: true }
+  const minuteOfHour = parseMinuteOfHour(content, postedAt)
+  return minuteOfHour !== null ? { at: minuteOfHour, given: true } : { at: postedAt, given: false }
 }
 
 export function parseConductor(content: string) {
@@ -99,6 +123,41 @@ export function parseMarks(content: string) {
   const matches = [...text.matchAll(fraction)].map(([, x, y, word]) => ({ count: Number(x), total: Number(y), word: !!word }))
   const found = matches.find((m) => m.word) ?? matches.find((m) => m.total >= 12 && m.total <= 16)
   return found && found.count >= 1 && found.count <= 30 ? { count: found.count, given: true } : { count: DEFAULT_MARKS, given: false }
+}
+
+export type SpeedKind = 'fast' | 'fastish' | 'slow'
+
+// kind: null when the post has a "Speed: …" we don't recognise; text: the post's own wording
+export type TrainSpeed = { kind: SpeedKind | null; text: string }
+
+// Semi-chill first, so its "chill" doesn't count as slow
+const SPEED_WORDS: [SpeedKind, RegExp][] = [
+  ['fastish', /\bsemi[\s-]?chill\b/i],
+  ['fast', /\b(fast|bullet|no[\s-]?stops?|zoomies)\b/i],
+  ['slow', /\b(slow|chill)\b/i],
+]
+
+const SPEED_FIELD_RE = /\b(?:speed|pace)\s*[:=\-–]\s*([^\n|]+)/i
+const MAX_SPEED_TEXT = 40
+
+function speedKind(text: string): { kind: SpeedKind; word: string } | null {
+  for (const [kind, re] of SPEED_WORDS) {
+    const word = re.exec(text)?.[0]
+    if (word) return { kind, word }
+  }
+  return null
+}
+
+// "Speed: bullet" first, then a speed word anywhere in the post
+export function parseSpeed(content: string): TrainSpeed | null {
+  const text = content.replace(/https?:\/\/\S+|<[^>]+>/g, ' ').replace(/[*_`~]/g, '')
+  const field = SPEED_FIELD_RE.exec(text)?.[1]?.trim()
+  if (field) {
+    const shown = field.length > MAX_SPEED_TEXT ? `${field.slice(0, MAX_SPEED_TEXT).trimEnd()}…` : field
+    return { kind: speedKind(field)?.kind ?? null, text: shown }
+  }
+  const found = speedKind(text)
+  return found ? { kind: found.kind, text: found.word } : null
 }
 
 // Everything a train pays, summed over its expansions (a double train does each expansion's marks)
@@ -128,6 +187,7 @@ export function parseTrain(message: HuntTrainMessage, labels: Record<string, str
     start: parseStartingPoint(message.content.replace(/https?:\/\/\S+|<[^>]+>/g, ' ')),
     marks: marks.count,
     marksGiven: marks.given,
+    speed: parseSpeed(message.content),
     content: message.content,
   }
 }

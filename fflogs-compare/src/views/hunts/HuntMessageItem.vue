@@ -16,7 +16,7 @@
           </a-tag>
         </template>
         <span class="font-semibold">{{ message.authorName }}</span>
-        <a-tag v-if="channelLabel" color="blue" class="me-0! cursor-pointer" @click="emit('channel', message.channelId!)">{{ channelLabel }}</a-tag>
+        <a-tag v-if="channelLabel" :color="channelDc ? undefined : 'blue'" :style="channelTagStyle" class="me-0! cursor-pointer" @click="emit('channel', message.channelId!)">{{ channelLabel }}</a-tag>
         <a-tooltip :title="new Date(message.createdAt).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'medium' })">
           <a-typography-text type="secondary" class="text-xs">{{ relativeTime(message.createdAt, now) }}</a-typography-text>
         </a-tooltip>
@@ -77,6 +77,7 @@ import type { HuntEmbed, HuntMessage, HuntPing } from '@/types/hunts'
 import { computed } from 'vue'
 import { pingColor, pingLabel, relativeTime } from './discordText'
 import DiscordText from './DiscordText.vue'
+import { DC_COLORS, dcOfChannel } from './dashboard/trains'
 
 const props = defineProps<{
   message: HuntMessage
@@ -88,6 +89,13 @@ const props = defineProps<{
 }>()
 
 const rolePings = computed(() => props.message.pings.filter((ping) => ping.startsWith('role:')))
+// A DC's train channel in that DC's dashboard colour, tinted like Ant's preset tags; any other channel blue
+const channelDc = computed(() => dcOfChannel(props.channelLabel))
+const channelTagStyle = computed(() => {
+  if (!channelDc.value) return undefined
+  const color = DC_COLORS[channelDc.value]
+  return { color, background: `${color}26`, borderColor: `${color}66` }
+})
 const emit = defineEmits<{ ping: [ping: HuntPing]; channel: [id: string] }>()
 
 const isImageOnly = (e: HuntEmbed) => !!(e.thumbnail || e.image) && !e.title && !e.description && !e.author && !e.footer && !e.fields.length
