@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { db, transaction } from './db.ts'
 import { type AuthEnv, requireAuth } from './auth.ts'
+import { requireFeature } from './features.ts'
 import type { HuntAttachment, HuntEmbed, HuntMessage, HuntMeta, HuntPage, HuntRank, HuntTrainList } from '../src/types/hunts.ts'
 
 // Messages of one Discord channel, stored in hunt_messages. They get here either way (or both):
@@ -299,7 +300,7 @@ hunts.delete('/ingest/:id', (c) => {
 
 // --- Reading ---
 
-hunts.use(requireAuth)
+hunts.use(requireAuth, requireFeature('hunts'))
 
 // Newest first. ?before=<message id> for the next page, ?after=<message id> for anything newer (one page, oldest
 // dropped if there's more), ?ping=<ping> (repeatable) to keep only messages with any of those pings,

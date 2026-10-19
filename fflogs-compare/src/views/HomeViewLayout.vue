@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -47,17 +47,19 @@ const childNames = new Set(
     .filter((r) => r.meta.menuLabel)
     .flatMap((r) => r.children.map((child) => child.name)),
 )
-const menuItems = router
+// Entries for features the account doesn't have are left out entirely
+const allMenuItems = router
   .getRoutes()
   .filter((r) => r.meta.menuLabel && !childNames.has(r.name))
   .map((r) => ({ ...r, pages: r.children.filter((child) => child.meta?.menuLabel) }))
+const menuItems = computed(() => allMenuItems.filter((item) => !item.meta.feature || auth.hasFeature(item.meta.feature)))
 
 // Submenus start open, and the one holding the current page is reopened when navigating into it
-const openKeys = ref(menuItems.filter((item) => item.pages.length).map((item) => String(item.name)))
+const openKeys = ref(allMenuItems.filter((item) => item.pages.length).map((item) => String(item.name)))
 watch(
   () => route.matched.map((r) => String(r.name)),
   (names) => {
-    const parent = names.find((name) => menuItems.some((item) => item.pages.length && String(item.name) === name))
+    const parent = names.find((name) => allMenuItems.some((item) => item.pages.length && String(item.name) === name))
     if (parent && !openKeys.value.includes(parent)) openKeys.value.push(parent)
   },
 )

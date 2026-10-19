@@ -10,6 +10,9 @@ declare module 'vue-router' {
     menuLabel?: string
     menuIcon?: Component
     requiresAuth?: boolean
+    // Only for accounts that have this feature switched on (server/features.ts); hidden from the menu otherwise.
+    // Children inherit it through route.matched.
+    feature?: string
   }
 }
 
@@ -79,7 +82,7 @@ const router = createRouter({
           path: 'hunts',
           name: 'hunts',
           component: () => import('@/views/hunts/HuntTrackerView.vue'),
-          meta: { menuLabel: 'Hunt Tracker', requiresAuth: true },
+          meta: { menuLabel: 'Hunt Tracker', requiresAuth: true, feature: 'hunts' },
           redirect: () => ({ name: lastHuntPage() }),
           children: [
             {
@@ -126,6 +129,7 @@ router.beforeEach(async (to) => {
   const auth = useAuthStore()
   await auth.ensureLoaded()
   if (!auth.user) return { name: 'login', query: { redirect: to.fullPath } }
+  if (to.matched.some((r) => r.meta.feature && !auth.hasFeature(r.meta.feature))) return { name: 'home' }
 })
 
 export default router

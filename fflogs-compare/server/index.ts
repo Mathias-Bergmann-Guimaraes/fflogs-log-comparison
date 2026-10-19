@@ -9,6 +9,8 @@ import { bis } from './bis.ts'
 import { gearSets } from './gearSets.ts'
 import { settings } from './settings.ts'
 import { hunts, startHuntSync } from './hunts.ts'
+import { userFeatures } from './features.ts'
+import { startAdminServer } from './admin.ts'
 
 const PORT = Number(process.env.PORT ?? 3000)
 
@@ -47,7 +49,7 @@ api.post('/auth/register', async (c) => {
     .run(creds.username, hash, Date.now())
 
   startSession(c, Number(lastInsertRowid))
-  return c.json({ id: Number(lastInsertRowid), username: creds.username }, 201)
+  return c.json({ id: Number(lastInsertRowid), username: creds.username, features: [] }, 201)
 })
 
 api.post('/auth/login', async (c) => {
@@ -63,7 +65,7 @@ api.post('/auth/login', async (c) => {
   }
 
   startSession(c, row.id)
-  return c.json({ id: row.id, username: row.username })
+  return c.json({ id: row.id, username: row.username, features: userFeatures(row.id) })
 })
 
 api.post('/auth/logout', (c) => {
@@ -78,7 +80,7 @@ api.route('/auth/google', google)
 
 api.get('/auth/me', (c) => {
   const user = currentUser(c)
-  return user ? c.json(user) : c.json({ error: 'Not logged in' }, 401)
+  return user ? c.json({ ...user, features: userFeatures(user.id) }) : c.json({ error: 'Not logged in' }, 401)
 })
 
 api.route('/bis', bis)
@@ -105,3 +107,4 @@ startHuntSync()
 serve({ fetch: app.fetch, port: PORT }, (info) => {
   console.log(`API listening on http://localhost:${info.port}`)
 })
+startAdminServer()

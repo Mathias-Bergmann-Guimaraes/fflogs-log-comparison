@@ -7,7 +7,7 @@ import { db } from './db.ts'
 const scryptAsync = promisify(scrypt) as (password: string, salt: Buffer, keylen: number) => Promise<Buffer>
 
 const SESSION_COOKIE = 'session'
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
+export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
 export type User = { id: number; username: string }
 export type AuthEnv = { Variables: { user: User } }

@@ -170,6 +170,16 @@ const migrations: string[] = [
   DROP TABLE slot_links;
   ALTER TABLE slot_links_new RENAME TO slot_links;
   `,
+  // 10: features only some accounts get (e.g. the Hunt Tracker), switched on per user from the admin page
+  // (server/admin.ts). A row means the feature is on; the names are FEATURES in server/features.ts.
+  `
+  CREATE TABLE user_features (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    feature    TEXT NOT NULL,
+    enabled_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, feature)
+  );
+  `,
 ]
 
 // node:sqlite has no transaction helper; synchronous fn only, so nothing else can interleave

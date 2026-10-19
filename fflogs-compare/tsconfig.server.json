@@ -1,7 +1,7 @@
 // TSConfig for the API server in server/, run with tsx (dev) or Node's type-stripping.
 {
   "extends": "@tsconfig/node24/tsconfig.json",
-  "include": ["server/**/*", "scripts/**/*", "src/constants/gearSharing.ts", "src/types/hunts.ts"],
+  "include": ["server/**/*", "scripts/**/*", "src/constants/gearSharing.ts", "src/types/hunts.ts", "src/types/admin.ts"],
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",

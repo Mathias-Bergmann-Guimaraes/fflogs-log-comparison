@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { ApiError, apiFetch } from '@/api/backend'
 
-export type User = { id: number; username: string }
+// features: what's been switched on for this account on the admin page (FEATURES in server/features.ts)
+export type User = { id: number; username: string; features: string[] }
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -29,10 +30,12 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = await apiFetch<User>('/auth/register', { method: 'POST', body: { username, password } })
   }
 
+  const hasFeature = (feature: string) => user.value?.features.includes(feature) ?? false
+
   async function logout() {
     await apiFetch('/auth/logout', { method: 'POST' })
     user.value = null
   }
 
-  return { user, ensureLoaded, login, register, logout }
+  return { user, ensureLoaded, hasFeature, login, register, logout }
 })
