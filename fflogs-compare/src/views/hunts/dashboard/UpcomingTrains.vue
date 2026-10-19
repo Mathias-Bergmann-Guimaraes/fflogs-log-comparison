@@ -28,6 +28,26 @@
             </div>
             <a-typography-text v-else type="secondary">Starting point not in the post</a-typography-text>
           </div>
+
+          <div class="mt-2 flex items-start gap-2">
+            <GiftOutlined class="mt-1 text-gray-400" />
+            <div>
+              <div class="font-medium">
+                {{ train.marks }} marks{{ train.types.length > 1 ? ' each' : '' }}
+                <a-tooltip v-if="!train.marksGiven" title="The post doesn't say how many, so this assumes a full train">
+                  <a-typography-text type="secondary" class="text-xs font-normal">assumed</a-typography-text>
+                </a-tooltip>
+              </div>
+              <div v-if="trainRewards(train).length" class="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                <a-tooltip v-for="reward in trainRewards(train)" :key="reward.currency" :title="reward.currency">
+                  <span class="inline-flex items-center gap-1 text-sm tabular-nums">
+                    <img :src="currencyIcons[reward.currency]" :alt="reward.currency" class="size-5" />
+                    {{ reward.amount }}
+                  </span>
+                </a-tooltip>
+              </div>
+            </div>
+          </div>
         </a-card>
       </a-badge-ribbon>
     </a-col>
@@ -36,9 +56,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { EnvironmentOutlined } from '@ant-design/icons-vue'
+import { EnvironmentOutlined, GiftOutlined } from '@ant-design/icons-vue'
+import { currencyIcons } from '@/constants/icons'
 import { pingColor, pingLabel, relativeTime } from '../discordText'
-import { TRAIN_TYPES, isActive, trainTypeOfLabel, type Train } from './trains'
+import { TRAIN_TYPES, isActive, trainRewards, trainTypeOfLabel, type Train } from './trains'
 
 const props = defineProps<{ trains: Train[]; now: number; labels: Record<string, string> }>()
 

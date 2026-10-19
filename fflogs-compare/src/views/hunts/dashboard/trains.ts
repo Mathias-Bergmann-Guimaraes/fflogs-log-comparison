@@ -31,6 +31,19 @@ export function trainTypeOfLabel(label: string | undefined): TrainTypeKey | null
   return TRAIN_TYPES.find((t) => t.aliases.includes(l) || l.includes(t.expansion.toLowerCase()))?.key ?? null
 }
 
+// What one A rank pays, per train type (https://ffxiv.consolegameswiki.com/wiki/The_Hunt). "Old" trains are almost
+// always Heavensward or Stormblood, so they get that rate rather than ARR's. Mathematics and Mnemonics only drop
+// on a level-capped job, so those are the most a train can give.
+export const CURRENCIES = ['Sacks of Nuts', 'Centurio Seals', 'Poetics', 'Mathematics', 'Mnemonics'] as const
+export type Currency = (typeof CURRENCIES)[number]
+
+export const MARK_REWARDS: Record<TrainTypeKey, Partial<Record<Currency, number>>> = {
+  '7.0': { 'Sacks of Nuts': 40, Poetics: 30, Mathematics: 20, Mnemonics: 10 },
+  '6.0': { 'Sacks of Nuts': 40, Poetics: 30, Mathematics: 10 },
+  '5.0': { 'Sacks of Nuts': 40, Poetics: 30, Mathematics: 10 },
+  old: { 'Centurio Seals': 40, Poetics: 30, Mathematics: 10 },
+}
+
 export type Train = {
   id: string
   world: string
@@ -44,6 +57,9 @@ export type Train = {
   postedAt: number
   conductor: string | null
   start: StartingPoint | null
+  // Marks per expansion, and whether the post said so (otherwise DEFAULT_MARKS)
+  marks: number
+  marksGiven: boolean
   content: string
 }
 
@@ -73,11 +89,32 @@ export function parseConductor(content: string) {
   return name?.replace(/[.\s]+$/, '').trim() || null
 }
 
+// A full train is 12 marks, sometimes more ("14/12 marks": 14 is the real count).
+export const DEFAULT_MARKS = 12
+
+// "12/12 marks" first; a bare "x/y" only when y looks like a train's total, so a date like "19/10" doesn't count
+export function parseMarks(content: string) {
+  const text = content.replace(/https?:\/\/\S+|<[^>]+>/g, ' ')
+  const fraction = /(?<![\d/.:])(\d{1,2})\s*\/\s*(\d{1,2})(?![\d/.:])(\s*marks?\b)?/gi
+  const matches = [...text.matchAll(fraction)].map(([, x, y, word]) => ({ count: Number(x), total: Number(y), word: !!word }))
+  const found = matches.find((m) => m.word) ?? matches.find((m) => m.total >= 12 && m.total <= 16)
+  return found && found.count >= 1 && found.count <= 30 ? { count: found.count, given: true } : { count: DEFAULT_MARKS, given: false }
+}
+
+// Everything a train pays, summed over its expansions (a double train does each expansion's marks)
+export function trainRewards(train: Train): { currency: Currency; amount: number }[] {
+  return CURRENCIES.map((currency) => ({
+    currency,
+    amount: train.types.reduce((sum, type) => sum + (MARK_REWARDS[type][currency] ?? 0) * train.marks, 0),
+  })).filter((r) => r.amount > 0)
+}
+
 export function parseTrain(message: HuntTrainMessage, labels: Record<string, string>): Train | null {
   const place = parseWorld(message.content)
   if (!place) return null
   const types = [...new Set(message.pings.map((ping) => trainTypeOfLabel(labels[ping])).filter((t) => t !== null))]
   const start = parseStart(message.content, message.createdAt)
+  const marks = parseMarks(message.content)
   return {
     id: message.id,
     ...place,
@@ -89,6 +126,8 @@ export function parseTrain(message: HuntTrainMessage, labels: Record<string, str
     conductor: parseConductor(message.content),
     // Without links and mentions, so an image id or role number can't look like a place
     start: parseStartingPoint(message.content.replace(/https?:\/\/\S+|<[^>]+>/g, ' ')),
+    marks: marks.count,
+    marksGiven: marks.given,
     content: message.content,
   }
 }

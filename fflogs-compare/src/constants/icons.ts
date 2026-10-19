@@ -8,7 +8,12 @@ import dungeonIcon from '@/assets/dungeon.png'
 import relicIcon from '@/assets/relic.png'
 import trialIcon from '@/assets/trial.png'
 import ultimateIcon from '@/assets/ultimate.png'
+import nutsIcon from '@/assets/Sack_of_Nuts.png'
+import centurioIcon from '@/assets/Centurio_Seal.png'
+import poeticsIcon from '@/assets/Allagan_Tomestone_of_Poetics.png'
+import mathematicsIcon from '@/assets/Allagan_Tomestone_of_Mathematics.png'
 import { gearItemIds, gearItemNames } from '@/constants/gearItems'
+import type { Currency } from '@/views/hunts/dashboard/trains'
 
 const ICON_BASE = 'https://lds-img.finalfantasyxiv.com/itemicon'
 
@@ -39,7 +44,16 @@ export const equipmentStatusIcons: Record<EquipmentStatus, string> = {
   [EquipmentStatus.ACQUIRED]: ``,
 }
 
-export type GearPiece = { icon: string; name: string | null }
+// Hunt rewards (icons from XIVAPI, 72px)
+export const currencyIcons: Record<Currency, string> = {
+  'Sacks of Nuts': nutsIcon,
+  'Centurio Seals': centurioIcon,
+  Poetics: poeticsIcon,
+  Mathematics: mathematicsIcon,
+  Mnemonics: tomeIcon,
+}
+
+export type GearPiece ={ icon: string; name: string | null }
 
 // The job's actual piece this tier (icons are 80px), or the generic slot icon if gearItems.ts doesn't know it.
 // Dungeon gear isn't in gearItems.ts, so it's always the generic icon.
