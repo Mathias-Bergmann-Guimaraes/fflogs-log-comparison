@@ -32,23 +32,23 @@
               </span>
             </a-checkbox>
           </td>
-          <template v-for="i in SLOT_COUNT" :key="i">
-            <td v-if="i - 1 === ACCESSORY_SLOTS[0]" />
+          <template v-for="slot in [...ARMOUR_SLOTS, ...ACCESSORY_SLOTS]" :key="slot">
+            <td v-if="slot === ACCESSORY_SLOTS[0]" />
             <td class="px-0.5">
               <button
-                v-if="row.shareable.includes(i - 1)"
+                v-if="row.shareable.includes(slot)"
                 type="button"
                 class="block size-8 cursor-pointer rounded border-2 p-0.5 transition"
-                :class="draft[row.job]!.has(i - 1) ? 'border-blue-400 bg-blue-900/50' : 'border-gray-700 opacity-35 hover:opacity-75'"
-                :title="`${bisSlotLabels[i - 1]}: ${draft[row.job]!.has(i - 1) ? 'linked' : 'not linked'}`"
-                @click="toggleSlot(row.job, i - 1)"
+                :class="draft[row.job]!.has(slot) ? 'border-blue-400 bg-blue-900/50' : 'border-gray-700 opacity-35 hover:opacity-75'"
+                :title="`${bisSlotLabels[slot]}: ${draft[row.job]!.has(slot) ? 'linked' : 'not linked'}`"
+                @click="toggleSlot(row.job, slot)"
               >
-                <img :src="gearPiece(row.job, bisSlots[i - 1]!, bis.sourceOf(row.job, i - 1)).icon" alt="" class="size-full rounded-sm" />
+                <img :src="bis.pieceOf(row.job, slot).icon" alt="" class="size-full rounded-sm" />
               </button>
               <div
                 v-else
                 class="size-8 rounded border-2 border-dashed border-gray-800"
-                :title="`${jobDisplayName(row.job)} can't wear ${displayName}'s ${bisSlotLabels[i - 1]}`"
+                :title="`${jobDisplayName(row.job)} can't wear ${displayName}'s ${bisSlotLabels[slot]}`"
               />
             </td>
           </template>
@@ -70,18 +70,19 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { EquipmentStatus } from '@/types/EquipmentType'
-import { gearPiece } from '@/constants/icons'
-import { bisSlotLabels, bisSlots } from '@/constants/bisSlots'
+import { bisSlotLabels } from '@/constants/bisSlots'
 import { jobDisplayName } from '@/constants/jobs'
-import { ACCESSORY_SLOTS, ARMOUR_SLOTS, SLOT_COUNT, linkableJobs, sharedSlots } from '@/constants/gearSharing'
-import { useBisStore } from '@/stores/bisStore'
+import { ACCESSORY_SLOTS, ARMOUR_SLOTS, linkableJobs, sharedSlots } from '@/constants/gearSharing'
+import { useGearSet } from './gearSetContext'
 
 const props = defineProps<{ job: string }>()
 const open = defineModel<boolean>('open', { required: true })
 
-const bis = useBisStore()
+const gearSet = useGearSet()
+const bis = gearSet.store
 const displayName = computed(() => jobDisplayName(props.job))
-const candidates = computed(() => linkableJobs(props.job))
+// Only jobs in this gear set can be linked
+const candidates = computed(() => linkableJobs(props.job).filter((other) => gearSet.jobs.includes(other)))
 
 // What's linked now, and the edited copy; nothing is saved until Apply
 const current = (other: string) => new Set(sharedSlots(props.job, other).filter((i) => bis.isLinked(props.job, other, i)))

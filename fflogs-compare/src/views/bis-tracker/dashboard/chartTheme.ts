@@ -6,6 +6,8 @@ export const statusColors = {
   upgrade: '#c98500',
   tome: '#3987e5',
   raid: '#d95926',
+  // Dungeon pieces are rare in a BiS set: a quiet grey, so the four above keep the contrast
+  dungeon: '#8c8c8c',
 }
 
 export const SURFACE = '#141414'

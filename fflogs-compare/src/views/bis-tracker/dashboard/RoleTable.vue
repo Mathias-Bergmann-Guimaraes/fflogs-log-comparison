@@ -65,6 +65,7 @@ const rows = computed(() =>
       tomes: materials.tomes,
       twines: materials.twines,
       glazes: materials.glazes,
+      solvents: materials.solvents,
       ...Object.fromEntries(trackedFloors.map((f) => [`floor${f.floor}`, books[f.floor]])),
       weeks: Math.max(tomeWeeks, raidWeeks),
     }
@@ -81,6 +82,7 @@ const columns: RoleColumn[] = [
   { key: 'tomes', label: 'Tomestones', icon: equipmentStatusIcons[EquipmentStatus.TOME], numeric: true, align: 'right' },
   { key: 'twines', label: 'Twines', icon: equipmentStatusIcons[EquipmentStatus.TWINE], numeric: true, align: 'right' },
   { key: 'glazes', label: 'Glazes', icon: equipmentStatusIcons[EquipmentStatus.GLAZE], numeric: true, align: 'right' },
+  { key: 'solvents', label: 'Solvents', icon: equipmentStatusIcons[EquipmentStatus.SOLVENT], numeric: true, align: 'right' },
   ...trackedFloors.map((f) => ({ key: `floor${f.floor}`, label: `${f.label} books`, floor: f.floor, numeric: true, align: 'right' as const })),
   { key: 'weeks', title: 'Weeks', width: 90, align: 'center' },
 ]

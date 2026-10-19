@@ -2,7 +2,7 @@
   <!-- Shared by the BiS Tracker pages (Dashboard, Gear sets in the side menu): loads the BiS progress once for both -->
   <div class="p-5">
     <a-alert v-if="loadError" type="error" :message="`Couldn't load your BiS progress: ${loadError}`" show-icon class="mb-4" />
-    <a-spin v-else-if="bis.loading" class="block py-10" />
+    <a-spin v-else-if="bis.loading || !gearSetsLoaded" class="block py-10" />
     <template v-else>
       <div class="mb-4 flex min-h-8 flex-wrap items-center justify-between gap-3">
         <a-typography-title :level="4" class="m-0!">{{ route.meta.menuLabel }}</a-typography-title>
@@ -14,20 +14,23 @@
           <dashboard-layout-controls v-if="route.name === 'bisDashboard'" />
         </a-space>
       </div>
-      <import-bis-dialog v-model:open="importOpen" />
+      <!-- Imports into the set open on the Gear sets page (the default one elsewhere) -->
+      <import-bis-dialog :key="importSetId" v-model:open="importOpen" :set-id="importSetId" />
       <router-view />
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ImportOutlined } from '@ant-design/icons-vue'
 import DashboardLayoutControls from './dashboard/DashboardLayoutControls.vue'
 import ImportBisDialog from './ImportBisDialog.vue'
 import { useBisStore } from '@/stores/bisStore'
+import { useGearSetsStore } from '@/stores/gearSetsStore'
 import { BIS_PAGE_KEY } from '@/router'
+import { activeGearSetId } from './activeGearSet'
 
 const route = useRoute()
 const importOpen = ref(false)
@@ -46,9 +49,13 @@ watch(
 )
 
 const bis = useBisStore()
+const gearSets = useGearSetsStore()
 const loadError = ref<string | null>(null)
+const gearSetsLoaded = ref(false)
 
-bis.load().catch((err) => {
+Promise.all([bis.load(), gearSets.load().then(() => (gearSetsLoaded.value = true))]).catch((err) => {
   loadError.value = err instanceof Error ? err.message : String(err)
 })
+
+const importSetId = computed(() => activeGearSetId(route, gearSets.sets))
 </script>

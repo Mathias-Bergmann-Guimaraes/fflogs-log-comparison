@@ -7,4 +7,5 @@ export const materialDefs: { key: keyof Materials; label: string; icon: string }
   { key: 'tomes', label: 'Tomestones', icon: equipmentStatusIcons[EquipmentStatus.TOME] },
   { key: 'twines', label: 'Twines', icon: equipmentStatusIcons[EquipmentStatus.TWINE] },
   { key: 'glazes', label: 'Glazes', icon: equipmentStatusIcons[EquipmentStatus.GLAZE] },
+  { key: 'solvents', label: 'Solvents', icon: equipmentStatusIcons[EquipmentStatus.SOLVENT] },
 ]

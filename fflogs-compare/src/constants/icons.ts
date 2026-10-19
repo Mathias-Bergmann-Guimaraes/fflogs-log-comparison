@@ -3,6 +3,11 @@ import raidIcon from '@/assets/raid.png'
 import tomeIcon from '@/assets/Allagan_Tomestone_of_Mnemonics.png'
 import twineIcon from '@/assets/Thundersteeped_twine_icon1.png'
 import glazeIcon from '@/assets/Thundersteeping_glaze_icon1.png'
+import solventIcon from '@/assets/Thundersteeped_solvent.png'
+import dungeonIcon from '@/assets/dungeon.png'
+import relicIcon from '@/assets/relic.png'
+import trialIcon from '@/assets/trial.png'
+import ultimateIcon from '@/assets/ultimate.png'
 import { gearItemIds, gearItemNames } from '@/constants/gearItems'
 
 const ICON_BASE = 'https://lds-img.finalfantasyxiv.com/itemicon'
@@ -17,6 +22,8 @@ export const equipmentIcons: Record<EquipmentType, string> = {
   [EquipmentType.NECKLACE]: `${ICON_BASE}/62/62571593c8d89fb74ad208a5a618a5255e12fa36.png`,
   [EquipmentType.BRACELETS]: `${ICON_BASE}/f8/f81f6b4e9af75cb515672f2e66e7bf9c94927b4a.png`,
   [EquipmentType.RING]: `${ICON_BASE}/ba/baebc2fd0a60fd2424b78c16bf8dc8282496c545.png`,
+  // Not a Lodestone icon like the rest: XIVAPI's for a sword, since there's no job-neutral weapon
+  [EquipmentType.WEAPON]: 'https://v2.xivapi.com/api/asset?path=ui/icon/030000/030700_hr1.tex&format=png',
 }
 
 export const equipmentStatusIcons: Record<EquipmentStatus, string> = {
@@ -24,11 +31,19 @@ export const equipmentStatusIcons: Record<EquipmentStatus, string> = {
   [EquipmentStatus.TOME]: tomeIcon,
   [EquipmentStatus.TWINE]: twineIcon,
   [EquipmentStatus.GLAZE]: glazeIcon,
+  [EquipmentStatus.SOLVENT]: solventIcon,
+  [EquipmentStatus.DUNGEON]: dungeonIcon,
+  [EquipmentStatus.RELIC]: relicIcon,
+  [EquipmentStatus.TRIAL]: trialIcon,
+  [EquipmentStatus.ULTIMATE]: ultimateIcon,
   [EquipmentStatus.ACQUIRED]: ``,
 }
 
-// The job's actual piece this tier (icons are 80px), or the generic slot icon if gearItems.ts doesn't know the job
-export function gearPiece(job: string, type: EquipmentType, source: GearSource): { icon: string; name: string | null } {
-  const id = gearItemIds[job]?.[type]?.[source === 'raid' ? 0 : 1]
+export type GearPiece = { icon: string; name: string | null }
+
+// The job's actual piece this tier (icons are 80px), or the generic slot icon if gearItems.ts doesn't know it.
+// Dungeon gear isn't in gearItems.ts, so it's always the generic icon.
+export function gearPiece(job: string, type: EquipmentType, source: GearSource): GearPiece {
+  const id = gearItemIds[job]?.[type]?.[source]
   return id ? { icon: `/gear/${id}.png`, name: gearItemNames[id] ?? null } : { icon: equipmentIcons[type], name: null }
 }

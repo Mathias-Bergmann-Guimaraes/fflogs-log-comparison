@@ -127,6 +127,49 @@ const migrations: string[] = [
   ALTER TABLE hunt_messages ADD COLUMN channel_id TEXT;
   ALTER TABLE hunt_messages ADD COLUMN channel_name TEXT;
   `,
+  // 9: custom gear sets (e.g. an ultimate's older gear) next to the default one. BiS progress and links get a set_id:
+  // 0 is the default set (no gear_sets row), anything else a gear_sets id. item_id pins the slot's piece to a
+  // specific item; null means the piece is worked out from the set's item level range (or this tier's gear for set 0).
+  // Both tables are rebuilt, since set_id joins their primary keys.
+  `
+  CREATE TABLE gear_sets (
+    id         INTEGER PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name       TEXT NOT NULL,
+    jobs       TEXT NOT NULL,
+    min_ilvl   INTEGER NOT NULL,
+    max_ilvl   INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE bis_slots_new (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    set_id     INTEGER NOT NULL DEFAULT 0,
+    job        TEXT NOT NULL,
+    slot_index INTEGER NOT NULL,
+    status     TEXT NOT NULL,
+    source     TEXT NOT NULL DEFAULT 'raid',
+    item_id    INTEGER,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, set_id, job, slot_index)
+  );
+  INSERT INTO bis_slots_new (user_id, job, slot_index, status, source, updated_at)
+    SELECT user_id, job, slot_index, status, source, updated_at FROM bis_slots;
+  DROP TABLE bis_slots;
+  ALTER TABLE bis_slots_new RENAME TO bis_slots;
+
+  CREATE TABLE slot_links_new (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    set_id     INTEGER NOT NULL DEFAULT 0,
+    job        TEXT NOT NULL,
+    slot_index INTEGER NOT NULL,
+    group_id   INTEGER NOT NULL,
+    PRIMARY KEY (user_id, set_id, job, slot_index)
+  );
+  INSERT INTO slot_links_new (user_id, job, slot_index, group_id) SELECT user_id, job, slot_index, group_id FROM slot_links;
+  DROP TABLE slot_links;
+  ALTER TABLE slot_links_new RENAME TO slot_links;
+  `,
 ]
 
 // node:sqlite has no transaction helper; synchronous fn only, so nothing else can interleave

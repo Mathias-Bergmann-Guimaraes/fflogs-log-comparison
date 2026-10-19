@@ -22,7 +22,7 @@
       <span v-else-if="column.key === 'cost'" class="tabular-nums">{{ record.cost.toLocaleString() }}</span>
       <template v-else-if="column.key === 'upgrade'">
         <a-tooltip v-if="record.upgrade" :title="`Then needs a ${record.upgrade}`">
-          <img :src="record.upgrade === 'twine' ? twineIcon : glazeIcon" alt="" class="size-4" />
+          <img :src="upgradeIcons[(record as Purchase).upgrade!]" alt="" class="size-4" />
         </a-tooltip>
       </template>
       <template v-else-if="column.key === 'when'">
@@ -63,8 +63,11 @@ import { ROW_HEIGHT, VISIBLE_ROWS, fixedRowsStyle } from './chartTheme'
 
 const props = defineProps<{ purchases: Purchase[]; currency: string; held: number }>()
 
-const twineIcon = equipmentStatusIcons[EquipmentStatus.TWINE]
-const glazeIcon = equipmentStatusIcons[EquipmentStatus.GLAZE]
+const upgradeIcons = {
+  twine: equipmentStatusIcons[EquipmentStatus.TWINE],
+  glaze: equipmentStatusIcons[EquipmentStatus.GLAZE],
+  solvent: equipmentStatusIcons[EquipmentStatus.SOLVENT],
+}
 
 const total = computed(() => props.purchases.reduce((sum, p) => sum + p.cost, 0))
 

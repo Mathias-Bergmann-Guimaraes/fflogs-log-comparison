@@ -2,9 +2,11 @@
 // Also imported by the server (server/bis.ts), so keep this file free of imports and enums.
 
 // Slot indexes match the `slots` layout in views/bis-tracker/JobBisCard.vue
-export const SLOT_COUNT = 10
+export const SLOT_COUNT = 11
 export const ARMOUR_SLOTS: readonly number[] = [0, 1, 2, 3, 4]
 export const ACCESSORY_SLOTS: readonly number[] = [5, 6, 7, 8, 9]
+// Weapons are job-specific, so this slot is never shared
+export const WEAPON_SLOT = 10
 
 // Fending / Healing / Striking / Maiming / Scouting / Aiming / Casting
 const armourGroups: readonly (readonly string[])[] = [

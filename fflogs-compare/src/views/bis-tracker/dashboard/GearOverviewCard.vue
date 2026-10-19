@@ -22,7 +22,10 @@
                 @click="router.push({ name: 'bisGear', query: { job } })"
               >
                 <star-filled v-if="favorites.isFavorite(job)" class="absolute -top-1.5 -left-1.5 text-xs text-amber-400" />
-                <check-circle-filled v-if="bis.isComplete(job)" class="absolute -top-1.5 -right-1.5 rounded-full bg-gray-900 text-sm text-green-500" />
+                <check-circle-filled
+                  v-if="bis.isComplete(job)"
+                  class="absolute -top-1.5 -right-1.5 rounded-full bg-gray-900 text-sm text-green-500"
+                />
                 <!-- Job icons are 76px: 38px is exactly half -->
                 <img :src="`/job/${job}.png`" :alt="jobDisplayName(job)" class="size-9.5 rounded-sm" />
                 <!-- Column by column like JobBisCard: armour on the left, accessories on the right.
@@ -73,9 +76,10 @@ const RAID_COLOR = '#9b6ce0'
 
 const legend = [
   { label: 'Have', color: statusColors.acquired },
-  { label: 'Twine / Glaze', color: statusColors.upgrade },
+  { label: 'Twine / Glaze / Solvent', color: statusColors.upgrade },
   { label: 'Tome', color: statusColors.tome },
   { label: 'Raid', color: RAID_COLOR },
+  { label: 'Other sources', color: statusColors.dungeon },
 ]
 
 function colorOf(status: EquipmentStatus) {
@@ -84,9 +88,15 @@ function colorOf(status: EquipmentStatus) {
       return statusColors.acquired
     case EquipmentStatus.TWINE:
     case EquipmentStatus.GLAZE:
+    case EquipmentStatus.SOLVENT:
       return statusColors.upgrade
     case EquipmentStatus.TOME:
       return statusColors.tome
+    case EquipmentStatus.DUNGEON:
+    case EquipmentStatus.RELIC:
+    case EquipmentStatus.TRIAL:
+    case EquipmentStatus.ULTIMATE:
+      return statusColors.dungeon
     default:
       return RAID_COLOR
   }
@@ -100,7 +110,11 @@ function tileHint(job: string) {
   const left = [
     [count(EquipmentStatus.RAID), 'raid'],
     [count(EquipmentStatus.TOME), 'tome'],
-    [count(EquipmentStatus.TWINE, EquipmentStatus.GLAZE), 'upgrade'],
+    [count(EquipmentStatus.TWINE, EquipmentStatus.GLAZE, EquipmentStatus.SOLVENT), 'upgrade'],
+    [count(EquipmentStatus.DUNGEON), 'dungeon'],
+    [count(EquipmentStatus.RELIC), 'relic'],
+    [count(EquipmentStatus.TRIAL), 'trial'],
+    [count(EquipmentStatus.ULTIMATE), 'ultimate'],
   ]
     .filter(([n]) => n)
     .map(([n, label]) => `${n} ${label}`)

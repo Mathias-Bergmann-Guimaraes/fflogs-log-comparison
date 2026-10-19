@@ -6,6 +6,7 @@ import { db } from './db.ts'
 import { type AuthEnv, currentUser, endSession, hashPassword, purgeExpiredSessions, startSession, verifyPassword } from './auth.ts'
 import { google, googleEnabled } from './google.ts'
 import { bis } from './bis.ts'
+import { gearSets } from './gearSets.ts'
 import { settings } from './settings.ts'
 import { hunts, startHuntSync } from './hunts.ts'
 
@@ -81,6 +82,7 @@ api.get('/auth/me', (c) => {
 })
 
 api.route('/bis', bis)
+api.route('/gear-sets', gearSets)
 api.route('/settings', settings)
 api.route('/hunts', hunts)
 

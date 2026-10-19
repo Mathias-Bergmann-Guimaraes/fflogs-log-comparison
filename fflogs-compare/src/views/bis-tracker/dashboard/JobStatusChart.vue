@@ -2,7 +2,11 @@
   <a-card size="small" title="Gear status per job" class="h-full">
     <a-empty v-if="!jobs.length" :image="Empty.PRESENTED_IMAGE_SIMPLE" description="Change an item on a job to start tracking it" />
     <!-- Native scroll (not ECharts dataZoom) so the wheel works and the scrollbar matches the rest of the dashboard -->
-    <div v-else class="overflow-y-auto [scrollbar-color:#434343_transparent] [scrollbar-width:thin]" :style="{ maxHeight: `${chartHeight(MAX_VISIBLE_JOBS)}px` }">
+    <div
+      v-else
+      class="overflow-y-auto [scrollbar-color:#434343_transparent] [scrollbar-width:thin]"
+      :style="{ maxHeight: `${chartHeight(MAX_VISIBLE_JOBS)}px` }"
+    >
       <VChart :option="option" :style="{ height: `${chartHeight(jobs.length)}px` }" autoresize />
     </div>
   </a-card>
@@ -36,9 +40,15 @@ const count = (job: string, statuses: EquipmentStatus[]) => bisSlots.filter((_, 
 
 const series = computed(() => [
   { name: 'Acquired', color: statusColors.acquired, statuses: [EquipmentStatus.ACQUIRED] },
-  { name: 'Needs upgrade', color: statusColors.upgrade, statuses: [EquipmentStatus.TWINE, EquipmentStatus.GLAZE] },
+  { name: 'Needs upgrade', color: statusColors.upgrade, statuses: [EquipmentStatus.TWINE, EquipmentStatus.GLAZE, EquipmentStatus.SOLVENT] },
   { name: 'Tomestone', color: statusColors.tome, statuses: [EquipmentStatus.TOME] },
   { name: 'Raid', color: statusColors.raid, statuses: [EquipmentStatus.RAID] },
+  // Relic, trial and ultimate weapons cost nothing tracked either, so they share the dungeon's quiet grey
+  {
+    name: 'Other sources',
+    color: statusColors.dungeon,
+    statuses: [EquipmentStatus.DUNGEON, EquipmentStatus.RELIC, EquipmentStatus.TRIAL, EquipmentStatus.ULTIMATE],
+  },
 ])
 
 const option = computed<EChartsOption>(() => ({

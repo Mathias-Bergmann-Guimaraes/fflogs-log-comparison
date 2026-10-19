@@ -64,11 +64,11 @@ import { jobDisplayName } from '@/constants/jobs'
 import { materialDefs } from '@/constants/materials'
 import { raidFloors } from '@/constants/raidFloors'
 import FloorBook from './FloorBook.vue'
-import { useBisStore } from '@/stores/bisStore'
+import { useGearSet } from './gearSetContext'
 
 const props = defineProps<{ jobs: readonly string[] }>()
 
-const bis = useBisStore()
+const { store: bis } = useGearSet()
 
 // Linked items count once in the role total, but in full for each job in the tooltip
 const total = computed(() => bis.materialsNeeded(props.jobs))

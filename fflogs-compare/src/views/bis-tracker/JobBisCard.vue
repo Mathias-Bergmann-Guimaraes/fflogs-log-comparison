@@ -4,9 +4,7 @@
     size="small"
     class="w-56"
     :class="
-      complete
-        ? 'border-green-500! bg-green-500/5! shadow-[0_0_12px_rgba(34,197,94,0.3)]'
-        : favorite && 'border-amber-400! shadow-[0_0_12px_rgba(251,191,36,0.25)]'
+      complete ? 'border-green-500! shadow-[0_0_12px_rgba(34,197,94,0.3)]' : favorite && 'border-amber-400! shadow-[0_0_12px_rgba(251,191,36,0.25)]'
     "
     :body-style="{ padding: '8px 12px 12px' }"
   >
@@ -17,7 +15,7 @@
       </a-space>
     </template>
     <template #extra>
-      <a-tooltip :title="favorite ? 'Favorite: bought and handed out first. Click to unstar' : 'Star to gear this job first'">
+      <a-tooltip v-if="!setId" :title="favorite ? 'Favorite: bought and handed out first. Click to unstar' : 'Star to gear this job first'">
         <a-button type="text" size="small" class="mr-1" :aria-pressed="favorite" @click="favorites.toggle(job)">
           <template #icon>
             <star-filled v-if="favorite" class="text-amber-400" />
@@ -51,18 +49,34 @@
       <span v-else class="text-gray-500">Link gear</span>
     </a-button>
 
+    <!-- The weapon gets a row of its own, across the card. It's never linked, so it has no hover highlight. -->
+    <div class="mb-3 px-1">
+      <equipment-slot
+        :status="bis.statusOf(job, WEAPON_SLOT)"
+        :piece="bis.pieceOf(job, WEAPON_SLOT)"
+        :type="EquipmentType.WEAPON"
+        :ultimate="bis.hasUltimate(job)"
+        :item-options="bis.itemOptions(job, WEAPON_SLOT)"
+        :item-id="bis.itemOf(job, WEAPON_SLOT)"
+        @update:status="bis.setStatus(job, WEAPON_SLOT, $event)"
+        @update:item="bis.setItem(job, WEAPON_SLOT, $event)"
+      />
+    </div>
+
     <!-- Fills column by column: armour on the left, accessories on the right, like the in-game character screen -->
     <div class="grid grid-flow-col grid-rows-5 justify-between gap-y-2.5 px-1">
       <!-- Wrapper owns the hover: a-dropdown (EquipmentSlot's root) doesn't pass mouse events through -->
-      <div v-for="(slot, i) in bisSlots" :key="i" @mouseenter="bis.highlight = { job, slot: i }" @mouseleave="bis.highlight = null">
+      <div v-for="i in gearSlots" :key="i" @mouseenter="bis.highlight = { job, slot: i }" @mouseleave="bis.highlight = null">
         <equipment-slot
-          :job="job"
           :status="bis.statusOf(job, i)"
-          :source="bis.sourceOf(job, i)"
-          :type="slot"
+          :piece="bis.pieceOf(job, i)"
+          :type="bisSlots[i]!"
           :linked-jobs="bis.linkedOnSlot(job, i)"
           :highlighted="bis.isHighlighted(job, i)"
+          :item-options="bis.itemOptions(job, i)"
+          :item-id="bis.itemOf(job, i)"
           @update:status="bis.setStatus(job, i, $event)"
+          @update:item="bis.setItem(job, i, $event)"
         />
       </div>
     </div>
@@ -72,7 +86,7 @@
       <a-tooltip v-for="f in raidFloors" :key="f.floor" :title="floorTooltip(f.floor)">
         <span class="inline-flex cursor-default items-center gap-1.5 text-xs tabular-nums">
           <floor-book :floor="f.floor" :size="20" />
-          <span v-if="!bis.isTracked(job) || !f.slots.length" class="text-gray-500">–</span>
+          <span v-if="!bis.isTracked(job)" class="text-gray-500">–</span>
           <span v-else :class="raid[f.floor] === 0 ? 'text-green-400' : ''">{{ raid[f.floor] }}</span>
         </span>
       </a-tooltip>
@@ -103,23 +117,28 @@ import { CheckCircleFilled, LinkOutlined, StarFilled, StarOutlined } from '@ant-
 import EquipmentSlot from './EquipmentSlot.vue'
 import LinkGearDialog from './LinkGearDialog.vue'
 import FloorBook from './FloorBook.vue'
-import { EquipmentStatus } from '@/types/EquipmentType'
+import { EquipmentStatus, EquipmentType } from '@/types/EquipmentType'
 import { bisSlotLabels, bisSlots } from '@/constants/bisSlots'
 import { jobDisplayName } from '@/constants/jobs'
-import { sharedSlots } from '@/constants/gearSharing'
+import { ACCESSORY_SLOTS, ARMOUR_SLOTS, WEAPON_SLOT, sharedSlots } from '@/constants/gearSharing'
 import { materialDefs } from '@/constants/materials'
 import { raidFloors, type RaidFloor } from '@/constants/raidFloors'
-import { useBisStore, type Materials } from '@/stores/bisStore'
+import type { Materials } from '@/stores/bisStore'
 import { useFavoritesStore } from '@/stores/favoritesStore'
+import { useGearSet } from './gearSetContext'
 
 const props = defineProps<{
   job: string
 }>()
 
-const bis = useBisStore()
+const { store: bis, setId } = useGearSet()
 const favorites = useFavoritesStore()
-const favorite = computed(() => favorites.isFavorite(props.job))
+// Favorites set the dashboard's buying order, which only covers the default set: custom sets show no star or gold border
+const favorite = computed(() => !setId && favorites.isFavorite(props.job))
 const dialogOpen = ref(false)
+
+// Everything but the weapon, which has its own row
+const gearSlots = [...ARMOUR_SLOTS, ...ACCESSORY_SLOTS]
 
 const acquiredCount = computed(() => bisSlots.filter((_, i) => bis.statusOf(props.job, i) === EquipmentStatus.ACQUIRED).length)
 const complete = computed(() => bis.isComplete(props.job))
@@ -134,12 +153,13 @@ const needed = computed(() => bis.materialsNeeded([props.job]))
 
 // Per material, the items behind the number: tomes -> ['Body: 825'], twines -> ['Body', 'Hands']
 const breakdown = computed(() => {
-  const lines: Record<keyof Materials, string[]> = { tomes: [], twines: [], glazes: [] }
+  const lines: Record<keyof Materials, string[]> = { tomes: [], twines: [], glazes: [], solvents: [] }
   for (const p of bis.neededPieces([props.job])) {
     const label = bisSlotLabels[p.slot]!
     if (p.tomes) lines.tomes.push(`${label}: ${p.tomes}`)
     if (p.twines) lines.twines.push(label)
     if (p.glazes) lines.glazes.push(label)
+    if (p.solvents) lines.solvents.push(label)
   }
   return lines
 })
@@ -149,7 +169,6 @@ const raid = computed(() => bis.booksNeeded([props.job]))
 // 'Floor 2: Head, Feet (8 books)' / why there's no number
 function floorTooltip(floor: RaidFloor) {
   const def = raidFloors.find((f) => f.floor === floor)!
-  if (!def.slots.length) return `${def.label}: weapons aren't tracked yet`
   if (!bis.isTracked(props.job)) return `${def.label}: change any item to start tracking this job`
   const items = bis
     .raidPieces([props.job])
@@ -164,7 +183,7 @@ function sharedSummary(other: string) {
   const shared = shareable.filter((i) => bis.isLinked(props.job, other, i))
   const what =
     shared.length === shareable.length
-      ? shareable.length === bisSlots.length
+      ? shareable.length === gearSlots.length
         ? 'all gear'
         : 'all accessories'
       : shared.map((i) => bisSlotLabels[i]).join(', ')

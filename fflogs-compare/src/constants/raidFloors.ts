@@ -20,7 +20,7 @@ export const raidFloors: {
   { floor: 1, label: 'Floor 1', slots: [5, 6, 7, 8, 9], icon: tier1Book, bookCost: 3 }, // Earrings, Necklace, Bracelets, Rings
   { floor: 2, label: 'Floor 2', slots: [0, 2, 4], icon: tier2Book, bookCost: 4, upgrade: 'glaze' }, // Head, Hands, Feet
   { floor: 3, label: 'Floor 3', slots: [1, 3], icon: tier3Book, bookCost: 6, upgrade: 'twine' }, // Body, Legs
-  { floor: 4, label: 'Floor 4', slots: [], icon: tier4Book, bookCost: 8 }, // Weapon: not tracked yet
+  { floor: 4, label: 'Floor 4', slots: [10], icon: tier4Book, bookCost: 8 }, // Weapon
 ]
 
 export function floorOf(slot: number): RaidFloor | undefined {

@@ -2,37 +2,16 @@
 import { EquipmentStatus, EquipmentType, type GearSource } from '@/types/EquipmentType'
 import { bisSlots } from '@/constants/bisSlots'
 import { gearItemIds, gearItemNames } from '@/constants/gearItems'
+import { jobAbbreviations } from '@/constants/jobs'
 
 const SHORTLINK_API = 'https://api.xivgear.app/shortlink'
 const STATIC_BIS = 'https://staticbis.xivgear.app'
 
 // xivgear's job abbreviations -> our job names
-const jobsByAbbreviation: Record<string, string> = {
-  PLD: 'Paladin',
-  WAR: 'Warrior',
-  DRK: 'DarkKnight',
-  GNB: 'Gunbreaker',
-  WHM: 'WhiteMage',
-  SCH: 'Scholar',
-  AST: 'Astrologian',
-  SGE: 'Sage',
-  MNK: 'Monk',
-  DRG: 'Dragoon',
-  NIN: 'Ninja',
-  SAM: 'Samurai',
-  RPR: 'Reaper',
-  VPR: 'Viper',
-  BRD: 'Bard',
-  MCH: 'Machinist',
-  DNC: 'Dancer',
-  BLM: 'BlackMage',
-  SMN: 'Summoner',
-  RDM: 'RedMage',
-  PCT: 'Pictomancer',
-}
+const jobsByAbbreviation: Record<string, string> = Object.fromEntries(Object.entries(jobAbbreviations).map(([job, abbr]) => [abbr, job]))
 
-// xivgear's slot keys, in bisSlots order (the weapon isn't tracked)
-const xivgearSlots = ['Head', 'Body', 'Hand', 'Legs', 'Feet', 'Ears', 'Neck', 'Wrist', 'RingLeft', 'RingRight'] as const
+// xivgear's slot keys, in bisSlots order (a paladin's OffHand shield isn't tracked)
+const xivgearSlots = ['Head', 'Body', 'Hand', 'Legs', 'Feet', 'Ears', 'Neck', 'Wrist', 'RingLeft', 'RingRight', 'Weapon'] as const
 
 type XivgearItems = Partial<Record<string, { id: number }>>
 type XivgearSet = { name?: string; items?: XivgearItems; isSeparator?: boolean; job?: string }
@@ -92,26 +71,40 @@ export async function fetchXivgearSheet(link: string): Promise<ImportedSheet> {
   return { name: data.name || imported[0]!.name, sets: imported, preferredIndex: Math.max(preferred, 0) }
 }
 
-// What the set means for one slot: the raid or tome piece we track, nothing (empty slot),
-// or an item this tier's raid/tome gear doesn't include (crafted, relic, an older tier...)
+// What the set means for one slot: a piece we track (raid or tome, or the relic or trial weapon), nothing (empty slot),
+// or an item this tier's gear doesn't include (crafted, an older tier...)
 export type SlotImport = { kind: 'piece'; source: GearSource } | { kind: 'empty' } | { kind: 'other'; itemId: number }
 
 export function slotImports(job: string, itemIds: readonly (number | null)[]): SlotImport[] {
   return bisSlots.map((type: EquipmentType, slot) => {
     const id = itemIds[slot]
     if (!id) return { kind: 'empty' }
-    const [raid, tome] = gearItemIds[job]?.[type] ?? []
-    if (id === raid) return { kind: 'piece', source: 'raid' }
-    if (id === tome) return { kind: 'piece', source: 'tome' }
-    return { kind: 'other', itemId: id }
+    const source = Object.entries(gearItemIds[job]?.[type] ?? {}).find(([, pieceId]) => pieceId === id)?.[0] as GearSource | undefined
+    return source ? { kind: 'piece', source } : { kind: 'other', itemId: id }
   })
+}
+
+// The status a slot starts on when its piece comes from `source`
+export function startingStatus(source: GearSource): EquipmentStatus {
+  const statuses: Record<GearSource, EquipmentStatus> = {
+    raid: EquipmentStatus.RAID,
+    tome: EquipmentStatus.TOME,
+    dungeon: EquipmentStatus.DUNGEON,
+    relic: EquipmentStatus.RELIC,
+    trial: EquipmentStatus.TRIAL,
+    ultimate: EquipmentStatus.ULTIMATE,
+  }
+  return statuses[source]
 }
 
 // The slot's new status: progress is kept while the piece stays the same, otherwise it starts over on the new piece
 export function importedStatus(current: EquipmentStatus, currentSource: GearSource, source: GearSource): EquipmentStatus {
-  if (currentSource === source) return current
-  return source === 'raid' ? EquipmentStatus.RAID : EquipmentStatus.TOME
+  return currentSource === source ? current : startingStatus(source)
 }
+
+// Where an item from another tier comes from, as far as its name tells: upgraded tome gear is "Augmented",
+// and everything else is taken for raid gear (the import dialog spots a custom set's dungeon piece itself)
+export const guessSource = (itemName: string | undefined): GearSource => (itemName?.startsWith('Augmented') ? 'tome' : 'raid')
 
 // Names (with item level) of items gearItems.ts doesn't know, from XIVAPI. Best effort: missing names just aren't shown.
 export async function fetchItemNames(ids: readonly number[]): Promise<Record<number, string>> {

@@ -10,6 +10,7 @@
   >
     <p class="mb-3 text-sm text-gray-400">
       Paste a set or sheet link from xivgear.app. Each item becomes that slot's BiS piece: progress is kept where the piece stays the same.
+      <template v-if="gearSet">Importing into {{ gearSet.name }}; items from any tier are kept.</template>
     </p>
 
     <a-input-search v-model:value="link" placeholder="https://xivgear.app/sl/…" enter-button="Load" :loading="loading" allow-clear @search="load" />
@@ -53,7 +54,14 @@
               <a-tag color="blue" class="m-0!">{{ equipmentStatuses[row.to].label }}</a-tag>
             </span>
           </template>
-          <a-tooltip v-else :title="row.kind === 'empty' ? 'Empty in this set' : 'Not this tier\'s raid or tome piece, so it isn\'t tracked'">
+          <a-tooltip
+            v-else
+            :title="
+              row.kind === 'empty'
+                ? 'Empty in this set'
+                : 'Not this tier\'s raid or tome piece, so it isn\'t tracked. Import it into a custom gear set to track it'
+            "
+          >
             <span class="text-xs text-gray-500">Left as is</span>
           </a-tooltip>
         </a-list-item>
@@ -82,12 +90,19 @@ import { bisSlotLabels, bisSlots } from '@/constants/bisSlots'
 import { equipmentStatuses } from '@/constants/equipmentStatus'
 import { equipmentIcons, gearPiece } from '@/constants/icons'
 import { jobDisplayName, jobsByRole } from '@/constants/jobs'
-import { fetchItemNames, fetchXivgearSheet, importedStatus, slotImports, type ImportedSheet } from '@/api/xivgear'
+import { fetchItemNames, fetchXivgearSheet, guessSource, importedStatus, slotImports, startingStatus, type ImportedSheet } from '@/api/xivgear'
 import { useBisStore } from '@/stores/bisStore'
+import { useGearSetsStore } from '@/stores/gearSetsStore'
+import { useItemCatalogStore } from '@/stores/itemCatalogStore'
 
+// The gear set to import into: 0 is the default one (this tier's raid and tome pieces only), anything else a custom set
+const props = defineProps<{ setId: number }>()
 const open = defineModel<boolean>('open', { required: true })
 
-const bis = useBisStore()
+const bis = useBisStore(props.setId)
+const gearSets = useGearSetsStore()
+const gearSet = computed(() => (props.setId ? gearSets.byId(props.setId) : undefined))
+const catalog = useItemCatalogStore()
 const router = useRouter()
 
 const link = ref('')
@@ -116,10 +131,13 @@ async function load() {
   sheet.value = null
   try {
     const loaded = await fetchXivgearSheet(link.value)
-    otherNames.value = await fetchItemNames(loaded.sets.flatMap((s) => s.itemIds.filter((id): id is number => id !== null)))
+    const ids = loaded.sets.flatMap((s) => s.itemIds.filter((id): id is number => id !== null))
+    // A custom set keeps every item, so it needs their icons too; the default set only names the ones it skips
+    if (gearSet.value) await catalog.ensureItems(ids)
+    else otherNames.value = await fetchItemNames(ids)
     sheet.value = loaded
     setIndex.value = loaded.preferredIndex
-    job.value = loaded.sets[loaded.preferredIndex]!.job ?? undefined
+    job.value = inSet(loaded.sets[loaded.preferredIndex]!.job)
   } catch (err) {
     loadError.value = `Couldn't load that set: ${err instanceof Error ? err.message : String(err)}`
   } finally {
@@ -132,15 +150,41 @@ const setOptions = computed(() => sheet.value?.sets.map((s, i) => ({ value: i, l
 
 // A sheet's sets can be for different jobs; follow the set unless it doesn't say
 watch(set, (s) => {
-  if (s?.job) job.value = s.job
+  const j = inSet(s?.job)
+  if (j) job.value = j
 })
 
-const jobOptions = jobsByRole.flatMap((group) => group.jobs).map((j) => ({ value: j, label: jobDisplayName(j) }))
+// Only the gear set's jobs can be imported into
+const setJobs = computed(() => gearSet.value?.jobs ?? jobsByRole.flatMap((group) => group.jobs))
+const inSet = (j: string | null | undefined) => (j && setJobs.value.includes(j) ? j : undefined)
+const jobOptions = computed(() => setJobs.value.map((j) => ({ value: j, label: jobDisplayName(j) })))
 const filterJob = (input: string, option: { label: string }) => option.label.toLowerCase().includes(input.toLowerCase())
 
-const rows = computed(() => {
+// itemId: custom sets only, the item the slot gets pinned to
+type PieceRow = { slot: number; kind: 'piece'; icon: string; name: string; from: EquipmentStatus; to: EquipmentStatus; itemId?: number }
+type Row = PieceRow | { slot: number; kind: 'empty' | 'other'; icon: string; name: string; from: null; to: null }
+
+// Custom sets take every item as it is, pinned to the slot. Progress is kept where the slot already shows that item.
+function customRows(j: string, itemIds: readonly (number | null)[]): Row[] {
+  const range = gearSet.value!
+  return bisSlots.map((type, slot) => {
+    const id = itemIds[slot]
+    if (!id) return { slot, kind: 'empty', icon: equipmentIcons[type], name: 'Nothing', from: null, to: null }
+    const item = catalog.items[id]
+    const from = bis.statusOf(j, slot)
+    const current = bis.itemOf(j, slot) ?? catalog.autoPiece(j, range.minIlvl, range.maxIlvl, type, bis.sourceOf(j, slot))?.id
+    // The range's dungeon piece (the one at the encounter's item level) starts on Dungeon; the rest go by name
+    const isDungeon = catalog.autoPiece(j, range.minIlvl, range.maxIlvl, type, 'dungeon')?.id === id
+    const to = current === id ? from : startingStatus(isDungeon ? 'dungeon' : guessSource(item?.name))
+    const name = item ? `${item.name} (i${item.ilvl})` : `Item ${id}`
+    return { slot, kind: 'piece', icon: item?.icon ?? equipmentIcons[type], name, from, to, itemId: id }
+  })
+}
+
+const rows = computed((): Row[] => {
   const j = job.value
   if (!j || !set.value) return []
+  if (gearSet.value) return customRows(j, set.value.itemIds)
   return slotImports(j, set.value.itemIds).map((imp, slot) => {
     const type = bisSlots[slot]!
     if (imp.kind === 'piece') {
@@ -154,7 +198,7 @@ const rows = computed(() => {
   })
 })
 
-const pieces = computed(() => rows.value.filter((r): r is typeof r & { from: EquipmentStatus; to: EquipmentStatus } => r.kind === 'piece'))
+const pieces = computed(() => rows.value.filter((r): r is PieceRow => r.kind === 'piece'))
 const importCount = computed(() => pieces.value.length)
 
 const warnings = computed(() => {
@@ -172,7 +216,7 @@ const warnings = computed(() => {
   const lost = pieces.value.filter((r) => r.from !== r.to && r.from !== EquipmentStatus.RAID && r.from !== EquipmentStatus.TOME)
   if (lost.length) lines.push(`Progress on ${lost.map((r) => bisSlotLabels[r.slot]).join(', ')} is reset, since the BiS piece changes.`)
 
-  if (!pieces.value.length && rows.value.length)
+  if (!pieces.value.length && rows.value.length && !gearSet.value)
     lines.push("None of this set's items are this tier's raid or tome gear, so there's nothing to import.")
   return lines
 })
@@ -183,11 +227,12 @@ async function onImport() {
   saving.value = true
   saveError.value = null
   try {
-    await bis.setStatuses(j, Object.fromEntries(pieces.value.map((r) => [r.slot, r.to])))
+    const pinned = gearSet.value ? Object.fromEntries(pieces.value.map((r) => [r.slot, r.itemId!])) : undefined
+    await bis.setStatuses(j, Object.fromEntries(pieces.value.map((r) => [r.slot, r.to])), pinned)
     message.success(`Imported ${jobDisplayName(j)}'s BiS`)
     open.value = false
     // Gear sets page scrolls to and highlights the card for ?job=
-    router.push({ name: 'bisGear', query: { job: j } })
+    router.push({ name: 'bisGear', query: { job: j, set: props.setId ? String(props.setId) : undefined } })
   } catch (err) {
     saveError.value = `Couldn't import: ${err instanceof Error ? err.message : String(err)}`
   } finally {

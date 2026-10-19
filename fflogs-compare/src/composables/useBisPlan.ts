@@ -3,6 +3,7 @@ import { EquipmentStatus } from '@/types/EquipmentType'
 import { jobsByRole } from '@/constants/jobs'
 import { raidFloors, floorOf, type RaidFloor } from '@/constants/raidFloors'
 import { bisSlots } from '@/constants/bisSlots'
+import { upgradeStatusFor } from '@/constants/equipmentStatus'
 import { useBisStore } from '@/stores/bisStore'
 import { useStockStore } from '@/stores/stockStore'
 import { useFavoritesStore } from '@/stores/favoritesStore'
@@ -12,7 +13,7 @@ const BOOKS_PER_FLOOR_PER_WEEK = 1
 const MAX_WEEKS = 520 // safety stop for the simulation
 
 export const allJobs = jobsByRole.flatMap((group) => group.jobs)
-export const trackedFloors = raidFloors.filter((f) => f.slots.length) // floor 4 (weapon) isn't tracked yet
+export const trackedFloors = raidFloors.filter((f) => f.slots.length)
 
 export type Source = 'tome' | RaidFloor
 
@@ -24,7 +25,7 @@ export type Purchase = {
   jobs: string[]
   source: Source
   cost: number
-  upgrade: 'twine' | 'glaze' | null
+  upgrade: 'twine' | 'glaze' | 'solvent' | null
   // Week it becomes affordable (1 = this week), from the simulation
   week: number
 }
@@ -105,7 +106,7 @@ export function useBisPlan() {
       jobs: withJobs(p.job, p.slot),
       source: 'tome',
       cost: p.tomes,
-      upgrade: p.twines ? 'twine' : p.glazes ? 'glaze' : null,
+      upgrade: p.twines ? 'twine' : p.glazes ? 'glaze' : p.solvents ? 'solvent' : null,
       week: weeks[i]!,
     }))
   })
@@ -217,7 +218,7 @@ export function useBisPlan() {
   // What an item becomes once bought: tome pieces still need their upgrade, book items are done
   function statusAfterBuying(purchase: Purchase): EquipmentStatus {
     if (purchase.source !== 'tome' || !purchase.upgrade) return EquipmentStatus.ACQUIRED
-    return purchase.upgrade === 'twine' ? EquipmentStatus.TWINE : EquipmentStatus.GLAZE
+    return upgradeStatusFor(bisSlots[purchase.slot]!)
   }
 
   // Marks the item bought on the gear sheet (all linked jobs) and pays for it out of the stock.
