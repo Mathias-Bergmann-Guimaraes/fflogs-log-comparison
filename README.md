@@ -16,26 +16,28 @@ The app lives in [`fflogs-compare/`](fflogs-compare), one level down:
 ```sh
 cd fflogs-compare
 npm install
-npm run codegen   # generates GraphQL types — needs .env, see below
 npm run dev
 ```
 
-`npm run dev` starts both Vite (default <http://localhost:5173>) and the API server on port 3000;
+`npm run dev` first runs `npm run codegen` (offline, no credentials needed), then starts both Vite (default <http://localhost:5173>) and the API server on port 3000;
 Vite proxies `/api` to it.
 
 ### Requirements
 
 - **Node** `>=22.12.0` (enforced by `engines` in `package.json`). The server uses Node's built-in
   `node:sqlite`, which doesn't exist on Node 20.
-- **FF Logs API client credentials** — create a v2 client at
-  <https://www.fflogs.com/api/clients/>, then put them in `fflogs-compare/.env`:
+- **FF Logs API client credentials (optional, but needed for the log comparison)** — create a v2
+  client at <https://www.fflogs.com/api/clients/>, then put them in `fflogs-compare/.env`:
 
   ```ini
   VITE_FFLOGS_CLIENT_ID=your_client_id
   VITE_FFLOGS_CLIENT_SECRET=your_client_secret
   ```
 
-  `.env` is gitignored, so every clone needs its own.
+  `.env` is gitignored, so every clone needs its own. Without them the app still loads and
+  everything that doesn't talk to FF Logs (login, BiS tracker, hunts, ...) works; the log
+  comparison page shows a "credentials not configured" notice instead of the report form. Vite
+  reads `.env` at startup, so restart `npm run dev` after adding them.
 
 - **Google login (optional)**: without these vars the "Continue with Google" button is hidden and
   username/password login still works. Create an OAuth client in Google Cloud Console (APIs &
@@ -138,10 +140,12 @@ Vite proxies `/api` to it.
   [`trains.ts`](fflogs-compare/src/views/hunts/dashboard/trains.ts)) for the dashboard to tell them apart.
 
 > [!IMPORTANT]
-> `npm run codegen` is **not** optional on a fresh clone. The generated file
-> `src/api/__generated__/graphql.ts` is gitignored, and nothing type-checks or builds without it.
-> Codegen introspects the **live** FF Logs schema, so it needs network access and valid
-> credentials — [`codegen.ts`](fflogs-compare/codegen.ts) throws if either env var is missing.
+> The generated file `src/api/__generated__/graphql.ts` is gitignored, and nothing type-checks or
+> builds without it. `npm run dev` and `npm run build` regenerate it automatically (`predev` /
+> `prebuild` hooks); to run `npm run type-check` or use the IDE on a fresh clone, run
+> `npm run codegen` once. Codegen reads the committed schema snapshot
+> [`schema.graphql`](fflogs-compare/schema.graphql), so it needs neither credentials nor network.
+> Only `npm run schema:update`, which refreshes that snapshot from the live API, needs credentials.
 
 ## Scripts
 
@@ -150,7 +154,8 @@ Run all of these from `fflogs-compare/`.
 | Script | What it does |
 | --- | --- |
 | `npm run dev` | Vite dev server (HMR + Vue DevTools) and the API server in watch mode |
-| `npm run codegen` | Regenerates `src/api/__generated__/graphql.ts` from the live schema |
+| `npm run codegen` | Regenerates `src/api/__generated__/graphql.ts` from `schema.graphql` (runs before `dev` and `build`) |
+| `npm run schema:update` | Re-introspects the live FF Logs schema into `schema.graphql` (needs `.env` credentials) |
 | `npm run build` | Type-check and production build (parallel, via `npm-run-all2`) |
 | `npm run build-only` | Production build, skipping type-check |
 | `npm run type-check` | `vue-tsc --build` |
@@ -164,7 +169,7 @@ Run all of these from `fflogs-compare/`.
 ```sh
 cd fflogs-compare
 npm ci
-npm run codegen && npm run build
+npm run build   # runs codegen first
 NODE_ENV=production PORT=3000 DB_PATH=/var/lib/ffxiv-companion/app.db npm start
 ```
 
@@ -196,7 +201,8 @@ to that `use([...])` call.
 
 ```
 fflogs-compare/
-├─ codegen.ts                # GraphQL codegen config; fetches an OAuth token at config-parse time
+├─ codegen.ts                # GraphQL codegen config; reads schema.graphql
+├─ schema.graphql            # committed FF Logs schema snapshot (refresh: npm run schema:update)
 ├─ vite.config.ts            # vue + devtools + tailwind plugins; '@' → ./src
 ├─ src/
 │  ├─ main.ts                # app bootstrap: Pinia, router, Antd, ECharts registration
@@ -215,7 +221,7 @@ fflogs-compare/
 │  ├─ assets/               # job icon PNGs + jobIcons.ts lookup, main.css
 │  ├─ router/index.ts        # / → HomeView (landing), /compare → fflogsComparison/CompareView
 │  └─ views/                 # HomeView (landing); fflogsComparison/: CompareView → PlayerPicker / TopPlayers → PlayerCard / BigPlayerCard
-└─ .env                      # FF Logs credentials (gitignored)
+└─ .env                      # optional FF Logs / Google credentials (gitignored)
 ```
 
 ## How the API layer works
@@ -224,7 +230,8 @@ There is no GraphQL client library. The chain is deliberately thin:
 
 1. [`auth.ts`](fflogs-compare/src/api/auth.ts) exchanges the client ID/secret for a bearer token
    via the OAuth 2.0 **client credentials** flow — no user login, public data only. The store
-   caches the token and fetches it lazily on first use.
+   caches the token and fetches it lazily on first use. It also exports `hasFFLogsCredentials`,
+   which `CompareView` checks to show a notice instead of the form when the env vars are missing.
 2. [`fflogs.ts`](fflogs-compare/src/api/fflogs.ts) POSTs `{ query, variables }` to
    `https://www.fflogs.com/api/v2/client`. FF Logs returns HTTP 200 even for GraphQL errors, so the
    wrapper inspects `json.errors` and throws.
@@ -240,7 +247,8 @@ sound because the query layer throws on errors — a successful response won't c
 ### Adding a query
 
 1. Drop a new document in `src/api/queries/<name>.graphql`.
-2. `npm run codegen` (requires `.env` + network).
+2. `npm run codegen` (offline). If the query uses fields newer than the snapshot, run
+   `npm run schema:update` first (requires `.env` + network) and commit the new `schema.graphql`.
 3. Add a typed wrapper in `src/api/useQuery.ts`.
 4. Call it from `fflogsStore.ts`, caching the result by report code where it makes sense.
 
