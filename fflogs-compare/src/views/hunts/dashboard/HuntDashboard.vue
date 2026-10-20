@@ -59,13 +59,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { message } from 'ant-design-vue'
 import { ReloadOutlined } from '@ant-design/icons-vue'
-import { apiFetch } from '@/api/backend'
-import type { HuntTrainList } from '@/types/hunts'
-import { fetchPingLabels } from '../discordText'
-import { DATA_CENTERS, TRAIN_TYPES, dedupeTrains, lastTrains, parseTrain, trainTypeOfLabel, type Train } from './trains'
+import { useHuntTrainsStore } from '@/stores/huntTrainsStore'
+import { DATA_CENTERS, TRAIN_TYPES, lastTrains, trainTypeOfLabel } from './trains'
 import TrainKpis from './TrainKpis.vue'
 import TrainSparkline from './TrainSparkline.vue'
 import UpcomingTrains from './UpcomingTrains.vue'
@@ -74,31 +73,14 @@ import LastTrainTable from './LastTrainTable.vue'
 import TrainHeatmap from './TrainHeatmap.vue'
 import TopConductors from './TopConductors.vue'
 
-const REFRESH_MS = 60_000
+// Loaded and kept fresh by the store, which the side menu also reads
+const trainsStore = useHuntTrainsStore()
+const { data, labels, loading, error, now, parsed, trains } = storeToRefs(trainsStore)
+const { load } = trainsStore
 
-const data = ref<HuntTrainList | null>(null)
-const labels = ref<Record<string, string>>({})
-const loading = ref(false)
-const now = ref(Date.now())
+watch(error, (err) => err && message.error(err))
 
-async function load() {
-  loading.value = true
-  try {
-    const [list, names] = await Promise.all([apiFetch<HuntTrainList>('/hunts/trains'), fetchPingLabels()])
-    data.value = list
-    labels.value = names
-  } catch (err) {
-    message.error(err instanceof Error ? err.message : "Couldn't load hunt trains")
-  } finally {
-    loading.value = false
-    now.value = Date.now()
-  }
-}
-
-const parsed = computed(() => (data.value?.messages ?? []).map((m) => parseTrain(m, labels.value)))
 const unparsed = computed(() => parsed.value.filter((t) => !t).length)
-// Newest first, like the messages
-const trains = computed<Train[]>(() => dedupeTrains(parsed.value.filter((t) => t !== null)))
 const last = computed(() => lastTrains(trains.value))
 const trackingSince = computed(() => data.value?.messages.at(-1)?.createdAt ?? null)
 
@@ -107,7 +89,8 @@ const unnamedTypes = computed(() => {
   return TRAIN_TYPES.filter((t) => !named.has(t.key))
 })
 
-load()
-const timers = [setInterval(load, REFRESH_MS), setInterval(() => (now.value = Date.now()), 15_000)]
-onBeforeUnmount(() => timers.forEach(clearInterval))
+// Fresh data on opening the page, unless a load is already on its way (the store starts one for its first watcher)
+const stopWatching = trainsStore.watch()
+if (!loading.value) load()
+onBeforeUnmount(stopWatching)
 </script>

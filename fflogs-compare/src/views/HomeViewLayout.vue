@@ -13,10 +13,15 @@
         <!-- Routes with child pages (BiS Tracker) become submenus -->
         <a-menu v-model:open-keys="openKeys" class="h-full" mode="inline" :selected-keys="[String(route.name)]" @click="onMenuClick">
           <template v-for="item in menuItems" :key="String(item.name)">
-            <a-sub-menu v-if="item.pages.length" :key="String(item.name)" :title="item.meta.menuLabel">
+            <a-sub-menu v-if="item.pages.length" :key="String(item.name)">
+              <template #title>
+                {{ item.meta.menuLabel }}
+                <a-badge v-if="trainDot?.key === String(item.name)" :status="trainDot.status" :title="trainDot.title" class="ms-1" />
+              </template>
               <a-menu-item v-for="page in item.pages" :key="String(page.name)">
                 <template v-if="page.meta?.menuIcon" #icon><component :is="page.meta?.menuIcon" /></template>
                 {{ page.meta?.menuLabel }}
+                <a-badge v-if="trainDot?.key === String(page.name)" :status="trainDot.status" :title="trainDot.title" class="ms-1" />
               </a-menu-item>
             </a-sub-menu>
             <a-menu-item v-else :key="String(item.name)">{{ item.meta.menuLabel }}</a-menu-item>
@@ -35,6 +40,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import { useHuntTrainsStore } from '@/stores/huntTrainsStore'
 
 const router = useRouter()
 const route = useRoute()
@@ -65,6 +71,31 @@ watch(
 )
 
 auth.ensureLoaded()
+
+// While a hunt train is running or announced, a dot on the Hunt Tracker submenu, or on its Train dashboard page
+// when the submenu is open. Trains are only served to signed-in users, so they're polled while someone is.
+const huntTrains = useHuntTrainsStore()
+let stopWatchingTrains: (() => void) | null = null
+watch(
+  () => auth.user,
+  (user) => {
+    stopWatchingTrains?.()
+    stopWatchingTrains = null
+    if (user) stopWatchingTrains = huntTrains.watch()
+    else huntTrains.clear()
+  },
+  { immediate: true },
+)
+const trainDot = computed(() => {
+  const status = huntTrains.activeStatus
+  if (!status || !auth.user) return null
+  return {
+    key: openKeys.value.includes('hunts') ? 'huntsDashboard' : 'hunts',
+    // Like the dashboard: pulsing for a running train, orange for one still to come
+    status: status === 'running' ? ('processing' as const) : ('warning' as const),
+    title: status === 'running' ? 'A hunt train is running' : 'A hunt train is announced',
+  }
+})
 
 async function onLogout() {
   await auth.logout()

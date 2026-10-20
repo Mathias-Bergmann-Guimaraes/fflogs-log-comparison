@@ -1,7 +1,9 @@
 <template>
   <div style="padding: 2rem" class="min-h-screen">
     <router-link :to="{ name: 'home' }" class="inline-block mb-4 text-sm text-gray-400 hover:text-gray-100">&larr; Home</router-link>
-    <player-picker @selected="handleSelectedJob"></player-picker>
+    <!-- Without FF Logs credentials every query would fail, so explain instead of showing a dead form -->
+    <a-alert v-if="!hasFFLogsCredentials" type="warning" show-icon message="Log comparison unavailable" :description="MISSING_CREDENTIALS_MESSAGE" />
+    <player-picker v-else @selected="handleSelectedJob"></player-picker>
 
     <div v-if="loadingTopPlayers" style="margin-top: 2rem; display: flex; justify-content: center">
       <a-spin size="large" tip="Loading top players..." />
@@ -25,6 +27,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useFFLogsStore } from '@/stores/fflogsStore'
+import { hasFFLogsCredentials, MISSING_CREDENTIALS_MESSAGE } from '@/api/auth'
 import PlayerPicker from './PlayerPicker.vue'
 import TopPlayers from './TopPlayers.vue'
 

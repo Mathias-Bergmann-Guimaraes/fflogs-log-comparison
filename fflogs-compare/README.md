@@ -5,6 +5,5 @@ The Vue app for fflogs-log-comparison. Setup, scripts, architecture, and gotchas
 
 ```sh
 npm install
-npm run codegen   # needs .env with FF Logs credentials
-npm run dev
+npm run dev   # runs codegen first; FF Logs credentials in .env are optional
 ```
