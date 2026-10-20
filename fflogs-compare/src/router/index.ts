@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
 import HomeViewLayout from '@/views/HomeViewLayout.vue'
 import { markRaw, type Component } from 'vue'
-import { AimOutlined, AppstoreOutlined, BellOutlined, DashboardOutlined, StarOutlined } from '@ant-design/icons-vue'
+import { AimOutlined, AppstoreOutlined, BellOutlined, DashboardOutlined, StarOutlined, TrophyOutlined } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/stores/authStore'
 
 declare module 'vue-router' {
@@ -18,10 +18,12 @@ declare module 'vue-router' {
 
 // Last BiS Tracker page opened (written by BisTrackerView); /bisTracker goes back to it
 export const BIS_PAGE_KEY = 'bis-tracker-page'
+const BIS_PAGES = ['bisDashboard', 'bisGear', 'bisRelics']
 
 function lastBisPage() {
   try {
-    if (localStorage.getItem(BIS_PAGE_KEY) === 'bisDashboard') return 'bisDashboard'
+    const saved = localStorage.getItem(BIS_PAGE_KEY)
+    if (saved && BIS_PAGES.includes(saved)) return saved
   } catch {
     // Storage unavailable: use the default
   }
@@ -75,6 +77,12 @@ const router = createRouter({
               name: 'bisGear',
               component: () => import('@/views/bis-tracker/GearSetsView.vue'),
               meta: { menuLabel: 'Gear sets', menuIcon: markRaw(AppstoreOutlined), requiresAuth: true },
+            },
+            {
+              path: 'relics',
+              name: 'bisRelics',
+              component: () => import('@/views/bis-tracker/RelicWeaponsView.vue'),
+              meta: { menuLabel: 'Relic Weapons', menuIcon: markRaw(TrophyOutlined), requiresAuth: true },
             },
           ],
         },
