@@ -1,5 +1,5 @@
 import type { HuntPing, HuntTrainMessage } from '@/types/hunts'
-import { parseStartingPoint, type StartingPoint } from '@/constants/aetherytes'
+import { expansionOfPlace, parseStartingPoint, type StartingPoint } from '@/constants/aetherytes'
 
 // EU worlds, in the order the Lodestone lists them
 export const DATA_CENTERS = [
@@ -26,11 +26,12 @@ const WORLD_WORD_RE = new RegExp(`\\b(${[...WORLDS.keys()].join('|')})\\b`, 'i')
 // once the user names it (Name pings on the A-Rank page) with the key or one of the aliases, e.g. "7.0" or "Dawntrail".
 export type TrainTypeKey = '7.0' | '6.0' | '5.0' | 'old'
 
-export const TRAIN_TYPES: { key: TrainTypeKey; label: string; expansion: string; aliases: string[] }[] = [
-  { key: '7.0', label: '7.0', expansion: 'Dawntrail', aliases: ['7.0', '7', 'dt', 'dawntrail'] },
-  { key: '6.0', label: '6.0', expansion: 'Endwalker', aliases: ['6.0', '6', 'ew', 'endwalker'] },
-  { key: '5.0', label: '5.0', expansion: 'Shadowbringers', aliases: ['5.0', '5', 'shb', 'shadowbringers'] },
-  { key: 'old', label: 'Old', expansion: 'ARR to Stormblood', aliases: ['old', 'older', 'legacy', 'arr', 'hw', 'sb', '4.0', 'stormblood'] },
+// color: an Ant preset, the same as the S rank cards' expansion tags (EXPANSIONS in sRanks.ts)
+export const TRAIN_TYPES: { key: TrainTypeKey; label: string; expansion: string; color: string; aliases: string[] }[] = [
+  { key: '7.0', label: '7.0', expansion: 'Dawntrail', color: 'green', aliases: ['7.0', '7', 'dt', 'dawntrail'] },
+  { key: '6.0', label: '6.0', expansion: 'Endwalker', color: 'geekblue', aliases: ['6.0', '6', 'ew', 'endwalker'] },
+  { key: '5.0', label: '5.0', expansion: 'Shadowbringers', color: 'purple', aliases: ['5.0', '5', 'shb', 'shadowbringers'] },
+  { key: 'old', label: 'Old', expansion: 'ARR to Stormblood', color: 'red', aliases: ['old', 'older', 'legacy', 'arr', 'hw', 'sb', '4.0', 'stormblood'] },
 ]
 
 export function trainTypeOfLabel(label: string | undefined): TrainTypeKey | null {
@@ -41,8 +42,8 @@ export function trainTypeOfLabel(label: string | undefined): TrainTypeKey | null
 
 // What one A rank pays, per train type (https://ffxiv.consolegameswiki.com/wiki/The_Hunt). "Old" trains are almost
 // always Heavensward or Stormblood, so they get that rate rather than ARR's. Mathematics and Mnemonics only drop
-// on a level-capped job, so those are the most a train can give.
-export const CURRENCIES = ['Sacks of Nuts', 'Centurio Seals', 'Poetics', 'Mathematics', 'Mnemonics'] as const
+// on a level-capped job, so those are the most a train can give. Allied Seals are only ARR's (S ranks, see sRanks.ts).
+export const CURRENCIES = ['Sacks of Nuts', 'Centurio Seals', 'Allied Seals', 'Poetics', 'Mathematics', 'Mnemonics'] as const
 export type Currency = (typeof CURRENCIES)[number]
 
 export const MARK_REWARDS: Record<TrainTypeKey, Partial<Record<Currency, number>>> = {
@@ -65,6 +66,8 @@ export type Train = {
   postedAt: number
   conductor: string | null
   start: StartingPoint | null
+  // Which expansion an "Old" train is, from where it starts: 2 (ARR), 3 (Heavensward) or 4 (Stormblood); null if unknown
+  oldExpansion: OldExpansion | null
   // Marks per expansion, and whether the post said so (otherwise DEFAULT_MARKS)
   marks: number
   marksGiven: boolean
@@ -161,11 +164,23 @@ export function parseSpeed(content: string): TrainSpeed | null {
 }
 
 // Everything a train pays, summed over its expansions (a double train does each expansion's marks)
+export type OldExpansion = 2 | 3 | 4
+
+// ARR A ranks pay Allied Seals too; used for an "Old" train known to be ARR (by where it starts)
+const ARR_MARK_REWARDS: Partial<Record<Currency, number>> = { 'Allied Seals': 40, 'Centurio Seals': 20, Poetics: 30, Mathematics: 10 }
+
+const markRewards = (train: Train, type: TrainTypeKey) => (type === 'old' && train.oldExpansion === 2 ? ARR_MARK_REWARDS : MARK_REWARDS[type])
+
 export function trainRewards(train: Train): { currency: Currency; amount: number }[] {
   return CURRENCIES.map((currency) => ({
     currency,
-    amount: train.types.reduce((sum, type) => sum + (MARK_REWARDS[type][currency] ?? 0) * train.marks, 0),
+    amount: train.types.reduce((sum, type) => sum + (markRewards(train, type)[currency] ?? 0) * train.marks, 0),
   })).filter((r) => r.amount > 0)
+}
+
+function oldExpansionOf(start: StartingPoint | null): OldExpansion | null {
+  const expansion = expansionOfPlace(start)
+  return expansion === 2 || expansion === 3 || expansion === 4 ? expansion : null
 }
 
 export function parseTrain(message: HuntTrainMessage, labels: Record<string, string>): Train | null {
@@ -174,6 +189,8 @@ export function parseTrain(message: HuntTrainMessage, labels: Record<string, str
   const types = [...new Set(message.pings.map((ping) => trainTypeOfLabel(labels[ping])).filter((t) => t !== null))]
   const start = parseStart(message.content, message.createdAt)
   const marks = parseMarks(message.content)
+  // Without links and mentions, so an image id or role number can't look like a place
+  const startPoint = parseStartingPoint(message.content.replace(/https?:\/\/\S+|<[^>]+>/g, ' '))
   return {
     id: message.id,
     ...place,
@@ -183,8 +200,8 @@ export function parseTrain(message: HuntTrainMessage, labels: Record<string, str
     endsAt: start.at + (start.given ? RUNNING_MS : RUNNING_UNTIMED_MS),
     postedAt: message.createdAt,
     conductor: parseConductor(message.content),
-    // Without links and mentions, so an image id or role number can't look like a place
-    start: parseStartingPoint(message.content.replace(/https?:\/\/\S+|<[^>]+>/g, ' ')),
+    start: startPoint,
+    oldExpansion: types.includes('old') ? oldExpansionOf(startPoint) : null,
     marks: marks.count,
     marksGiven: marks.given,
     speed: parseSpeed(message.content),

@@ -37,11 +37,24 @@
     </a-alert>
 
     <a-row :gutter="[16, 16]">
-      <a-col :span="24">
-        <UpcomingTrains :trains="trains" :now="now" :labels="labels" />
+      <!-- A rank trains and S ranks side by side and level (two rows of cards each, then they scroll), each with the last day per DC -->
+      <a-col :xs="24" :xl="12">
+        <div class="flex h-full flex-col gap-4">
+          <HuntSection title="A rank trains" :count="activeTrainCount" color="#52c41a">
+            <template #extra><HuntFilter v-model="filters.a" :groups="A_FILTERS" /></template>
+            <UpcomingTrains :trains="shownTrains" :now="now" :labels="labels" />
+          </HuntSection>
+          <DcSparkline :events="trainEvents" :now="now" label="Trains" caption="Trains started per hour, last 24 hours" />
+        </div>
       </a-col>
-      <a-col :span="24">
-        <TrainSparkline :trains="trains" :now="now" />
+      <a-col :xs="24" :xl="12">
+        <div class="flex h-full flex-col gap-4">
+          <HuntSection title="S ranks" :count="sRankUpCount" color="#f5222d">
+            <template #extra><HuntFilter v-model="filters.s" :groups="S_FILTERS" /></template>
+            <SRankCards :s-ranks="shownSRanks" :now="now" />
+          </HuntSection>
+          <DcSparkline :events="sRankEvents" :now="now" label="S ranks" caption="S ranks reported per hour, last 24 hours" />
+        </div>
       </a-col>
       <a-col :span="24">
         <TrainKpis :trains="trains" :now="now" />
@@ -70,9 +83,13 @@ import { storeToRefs } from 'pinia'
 import { message } from 'ant-design-vue'
 import { BellOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { useHuntTrainsStore } from '@/stores/huntTrainsStore'
-import { DATA_CENTERS, TRAIN_TYPES, lastTrains, trainTypeOfLabel } from './trains'
+import { DATA_CENTERS, TRAIN_TYPES, isActive, lastTrains, trainTypeOfLabel } from './trains'
+import { EXPANSIONS, isUp } from './sRanks'
 import TrainKpis from './TrainKpis.vue'
-import TrainSparkline from './TrainSparkline.vue'
+import DcSparkline from './DcSparkline.vue'
+import HuntSection from './HuntSection.vue'
+import HuntFilter, { type FilterGroup, type FilterValue } from './HuntFilter.vue'
+import SRankCards from './SRankCards.vue'
 import UpcomingTrains from './UpcomingTrains.vue'
 import NextTrainCard from './NextTrainCard.vue'
 import LastTrainTable from './LastTrainTable.vue'
@@ -82,7 +99,7 @@ import HuntAlertsModal from './HuntAlertsModal.vue'
 
 // Loaded and kept fresh by the store, which the side menu also reads
 const trainsStore = useHuntTrainsStore()
-const { data, labels, loading, error, now, parsed, trains } = storeToRefs(trainsStore)
+const { data, labels, loading, error, now, parsed, trains, sRanks } = storeToRefs(trainsStore)
 const { load } = trainsStore
 
 watch(error, (err) => err && message.error(err))
@@ -92,6 +109,58 @@ const alertsOpen = ref(false)
 
 const unparsed = computed(() => parsed.value.filter((t) => !t).length)
 const last = computed(() => lastTrains(trains.value))
+// Which DCs and expansions each side's cards show (the charts always show everything), remembered per browser
+const DC_OPTIONS = DATA_CENTERS.map((dc) => ({ value: dc.name, label: dc.name }))
+const A_FILTERS: FilterGroup[] = [
+  { key: 'dc', label: 'Data center', options: DC_OPTIONS },
+  { key: 'expansion', label: 'Expansion', options: TRAIN_TYPES.map((t) => ({ value: t.key, label: `${t.label} ${t.expansion}` })) },
+]
+const S_FILTERS: FilterGroup[] = [
+  { key: 'dc', label: 'Data center', options: DC_OPTIONS },
+  {
+    key: 'expansion',
+    label: 'Expansion',
+    options: Object.entries(EXPANSIONS)
+      .map(([key, e]) => ({ value: key, label: `${e.label} ${e.name}` }))
+      .reverse(),
+  },
+]
+
+const FILTERS_KEY = 'huntDashboardFilters'
+const filters = ref<{ a: FilterValue; s: FilterValue }>(readFilters())
+function readFilters() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(FILTERS_KEY) ?? '{}')
+    return { a: saved.a ?? {}, s: saved.s ?? {} }
+  } catch {
+    return { a: {}, s: {} }
+  }
+}
+watch(
+  filters,
+  (value) => {
+    try {
+      localStorage.setItem(FILTERS_KEY, JSON.stringify(value))
+    } catch {
+      // Not remembered then; it still filters
+    }
+  },
+  { deep: true },
+)
+
+// An empty group lets everything through; with expansions ticked, a train or S rank of unknown expansion is left out
+const passes = (ticked: string[] | undefined, values: string[]) => !ticked?.length || values.some((v) => ticked.includes(v))
+const shownTrains = computed(() => trains.value.filter((t) => passes(filters.value.a.dc, [t.dc]) && passes(filters.value.a.expansion, t.types)))
+const shownSRanks = computed(() =>
+  sRanks.value.filter((s) => passes(filters.value.s.dc, [s.dc]) && passes(filters.value.s.expansion, s.expansion ? [String(s.expansion)] : [])),
+)
+
+// What's up now, in the section headers; and when each one happened, for the per-hour charts
+const activeTrainCount = computed(() => shownTrains.value.filter((t) => isActive(t, now.value)).length)
+const sRankUpCount = computed(() => shownSRanks.value.filter((s) => isUp(s, now.value)).length)
+const trainEvents = computed(() => trains.value.map((t) => ({ at: t.startsAt, dc: t.dc })))
+const sRankEvents = computed(() => sRanks.value.map((s) => ({ at: s.spottedAt, dc: s.dc })))
+
 const trackingSince = computed(() => data.value?.messages.at(-1)?.createdAt ?? null)
 
 const unnamedTypes = computed(() => {

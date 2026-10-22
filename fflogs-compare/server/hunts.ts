@@ -4,7 +4,7 @@ import { bodyLimit } from 'hono/body-limit'
 import { db, transaction } from './db.ts'
 import { type AuthEnv, requireAuth } from './auth.ts'
 import { requireFeature } from './features.ts'
-import type { HuntAttachment, HuntEmbed, HuntMessage, HuntMeta, HuntPage, HuntRank, HuntTrainList } from '../src/types/hunts.ts'
+import type { HuntAttachment, HuntEmbed, HuntMessage, HuntMeta, HuntPage, HuntRank, HuntSRankList, HuntTrainList } from '../src/types/hunts.ts'
 
 // Messages of one Discord channel, stored in hunt_messages. They get here either way (or both):
 // - push: another bot that can see the channel POSTs each message to /api/hunts/ingest with a shared secret
@@ -377,6 +377,35 @@ hunts.get('/trains', (c) => {
       channelName: r.channel_name,
       content: r.content,
       pings: JSON.parse(r.pings),
+      createdAt: r.created_at,
+    })),
+  }
+  return c.json(list)
+})
+
+// The S rank spawns for the Hunt Dashboard: the last day's, for its cards (only recent ones show) and its per-hour
+// chart. Older than the S rank pages show, but only this far back; the cap only guards against runaway growth.
+const S_RANKS_SINCE_MS = 24 * 3_600_000
+const S_RANKS_LIMIT = 2_000
+
+hunts.get('/sranks', (c) => {
+  const ids = channelIdsByRank().S
+  const rows = ids.length
+    ? (db
+        .prepare(
+          `SELECT id, channel_name, content, embeds, created_at FROM hunt_messages
+           WHERE channel_id IN (${placeholders(ids)}) AND created_at > ?
+           ORDER BY created_at DESC, id DESC LIMIT ${S_RANKS_LIMIT}`,
+        )
+        .all(...ids, Date.now() - S_RANKS_SINCE_MS) as Pick<Row, 'id' | 'channel_name' | 'content' | 'embeds' | 'created_at'>[])
+    : []
+  const list: HuntSRankList = {
+    enabled: huntsEnabled,
+    messages: rows.map((r) => ({
+      id: r.id,
+      channelName: r.channel_name,
+      content: r.content,
+      embeds: JSON.parse(r.embeds),
       createdAt: r.created_at,
     })),
   }

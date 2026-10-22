@@ -1,5 +1,5 @@
 <template>
-  <a-card size="small" class="h-full">
+  <a-card size="small">
     <div class="flex flex-wrap gap-x-10 gap-y-2">
       <!-- The Light / Chaos swatches double as the legend -->
       <div v-for="stat in stats" :key="stat.label">
@@ -10,7 +10,7 @@
         <div class="text-xl font-semibold tabular-nums">{{ stat.value }}</div>
       </div>
       <div class="flex-1" />
-      <a-typography-text type="secondary" class="self-start text-xs">Trains started per hour, last 24 hours</a-typography-text>
+      <a-typography-text type="secondary" class="self-start text-xs">{{ caption }}</a-typography-text>
     </div>
     <VChart :option="option" style="height: 90px" autoresize />
   </a-card>
@@ -20,27 +20,29 @@
 import { computed } from 'vue'
 import type { EChartsOption } from 'echarts'
 import { SURFACE, tooltipStyle } from '@/views/bis-tracker/dashboard/chartTheme'
-import { DC_COLORS, type DataCenterName, type Train } from './trains'
+import { DC_COLORS, type DataCenterName } from './trains'
 
-const props = defineProps<{ trains: Train[]; now: number }>()
+// Hunts per hour and DC over the last day: A rank trains by when they started, S ranks by when they were reported.
+// label names the total ("Trains"), caption says what's counted.
+const props = defineProps<{ events: { at: number; dc: DataCenterName }[]; now: number; label: string; caption: string }>()
 
 const HOUR_MS = 3_600_000
 const HOURS = 24
 const DCS = Object.keys(DC_COLORS) as DataCenterName[]
 
-const recent = computed(() => props.trains.filter((t) => t.startsAt <= props.now && t.startsAt > props.now - HOURS * HOUR_MS))
+const recent = computed(() => props.events.filter((e) => e.at <= props.now && e.at > props.now - HOURS * HOUR_MS))
 
 // Hour buckets ending now; the last one is the hour so far
 const buckets = computed(() => {
   const from = props.now - HOURS * HOUR_MS
   const counts = Array.from({ length: HOURS }, (_, i) => ({ start: from + i * HOUR_MS, Light: 0, Chaos: 0 }))
-  for (const t of recent.value) counts[Math.min(HOURS - 1, Math.floor((t.startsAt - from) / HOUR_MS))]![t.dc]++
+  for (const e of recent.value) counts[Math.min(HOURS - 1, Math.floor((e.at - from) / HOUR_MS))]![e.dc]++
   return counts
 })
 
 const stats = computed<{ label: string; value: number; color?: string }[]>(() => [
-  { label: 'Trains', value: recent.value.length },
-  ...DCS.map((dc) => ({ label: dc, value: recent.value.filter((t) => t.dc === dc).length, color: DC_COLORS[dc] })),
+  { label: props.label, value: recent.value.length },
+  ...DCS.map((dc) => ({ label: dc, value: recent.value.filter((e) => e.dc === dc).length, color: DC_COLORS[dc] })),
 ])
 
 const time = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { timeStyle: 'short' })

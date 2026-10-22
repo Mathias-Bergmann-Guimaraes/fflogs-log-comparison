@@ -116,3 +116,40 @@ export function parseStartingPoint(text: string): StartingPoint | null {
   if (zones[0]) return { aetheryte: null, zone: zones[0].zone, instance }
   return null
 }
+
+// The expansion a place belongs to (2 = A Realm Reborn to 7 = Dawntrail), from its zone, or for a city from its name.
+// "Old" A rank trains are pinged together, so this tells an ARR, Heavensward or Stormblood one apart by where it starts.
+const ZONE_EXPANSIONS: [number, string[]][] = [
+  [2, ['La Noscea', 'Shroud', 'Thanalan', 'Coerthas Central Highlands', 'Mor Dhona']],
+  [3, ['Coerthas Western Highlands', 'The Sea of Clouds', 'Azys Lla', 'The Dravanian Forelands', 'The Churning Mists', 'The Dravanian Hinterlands']],
+  [4, ['The Fringes', 'The Peaks', 'The Lochs', 'The Ruby Sea', 'Yanxia', 'The Azim Steppe']],
+  [5, ['Lakeland', 'Kholusia', 'Amh Araeng', 'Il Mheg', "The Rak'tika Greatwood", 'The Tempest']],
+  [6, ['Labyrinthos', 'Thavnair', 'Garlemald', 'Mare Lamentorum', 'Elpis', 'Ultima Thule']],
+  [7, ['Urqopacha', "Kozama'uka", "Yak T'el", 'Shaaloani', 'Heritage Found', 'Living Memory']],
+]
+const CITY_EXPANSIONS: Record<string, number> = {
+  'Limsa Lominsa Lower Decks': 2,
+  "Wolves' Den Pier": 2,
+  'New Gridania': 2,
+  "Ul'dah - Steps of Nald": 2,
+  'The Gold Saucer': 2,
+  "Revenant's Toll": 2,
+  Foundation: 3,
+  Idyllshire: 3,
+  "Rhalgr's Reach": 4,
+  Kugane: 4,
+  'The Doman Enclave': 4,
+  'The Crystarium': 5,
+  Eulmore: 5,
+  'Radz-at-Han': 6,
+  'Old Sharlayan': 6,
+  Tuliyollal: 7,
+  'Solution Nine': 7,
+}
+
+// Zones match on their region too ("Eastern La Noscea" is La Noscea)
+export function expansionOfPlace(point: StartingPoint | null): number | null {
+  if (!point) return null
+  if (point.zone) return ZONE_EXPANSIONS.find(([, zones]) => zones.some((z) => point.zone!.includes(z)))?.[0] ?? null
+  return point.aetheryte ? (CITY_EXPANSIONS[point.aetheryte] ?? null) : null
+}

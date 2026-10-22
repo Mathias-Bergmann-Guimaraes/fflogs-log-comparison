@@ -21,6 +21,7 @@
     "gear-icons": "node --experimental-strip-types scripts/gear-icons.ts && prettier --write src/constants/gearItems.ts",
     "admin": "node --env-file-if-exists=.env --experimental-sqlite --experimental-strip-types scripts/admin.ts",
     "fake-hunt": "node --env-file-if-exists=.env --experimental-strip-types scripts/fake-hunt.ts",
+    "fake-srank": "node --env-file-if-exists=.env --experimental-strip-types scripts/fake-srank.ts",
     "codegen": "graphql-codegen --config codegen.ts",
     "schema:update": "node --env-file-if-exists=.env --experimental-strip-types scripts/update-schema.ts",
     "start": "node --env-file-if-exists=.env --experimental-sqlite --experimental-strip-types server/index.ts"

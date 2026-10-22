@@ -5,13 +5,13 @@
 //   npm run fake-hunt -- --delete <message id>
 import { parseArgs } from 'node:util'
 
-// What --all sends. 7.0 and 6.0 are the hunt server's real roles; nobody has seen a 5.0 or Old ping yet, so those are
-// made up and only show as that expansion once named "5.0" and "old" under Name pings on the A-Rank page.
+// What --all sends: the hunt server's real role for each expansion, which show as that expansion once named
+// "7.0", "6.0", "5.0" and "Old" under Name pings on the A-Rank page.
 const ALL_TRAINS = [
   { type: '7.0', role: '1255412015757918240', world: 'Zodiark', at: 'Yyasulani Station - Heritage Found - Instance 1' },
   { type: '6.0', role: '934264593470070784', world: 'Odin', at: 'Aporia - Labyrinthos' },
-  { type: '5.0', role: '1000000000000000050', world: 'Omega', at: 'Fort Jobb - Lakeland' },
-  { type: 'Old', role: '1000000000000000099', world: 'Phoenix', at: 'Castrum Oriens - The Fringes' },
+  { type: '5.0', role: '934264458069561354', world: 'Omega', at: 'Fort Jobb - Lakeland' },
+  { type: 'Old', role: '1091904124301353110', world: 'Phoenix', at: 'Castrum Oriens - The Fringes' },
 ]
 
 const { values: args } = parseArgs({

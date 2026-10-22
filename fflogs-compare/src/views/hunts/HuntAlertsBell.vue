@@ -81,15 +81,24 @@ import HuntAlertsModal from './dashboard/HuntAlertsModal.vue'
 type HuntAlert = { id: string; rank: HuntRank; running: boolean; world: string; dc: DataCenterName; at: number; text: string }
 
 const router = useRouter()
-const { alertTrains, now } = storeToRefs(useHuntTrainsStore())
+const { alertTrains, alertSRanks, now } = storeToRefs(useHuntTrainsStore())
 
-// S ranks join here once they're tracked, from their own store, already filtered by the alert rules
-const alerts = computed<HuntAlert[]>(() =>
-  alertTrains.value.map((train) => {
+// Both already filtered by the alert rules
+const alerts = computed<HuntAlert[]>(() => [
+  ...alertSRanks.value.map((s) => ({
+    id: s.id,
+    rank: 'S' as const,
+    running: true,
+    world: s.world,
+    dc: s.dc,
+    at: s.spottedAt,
+    text: `${s.ss ? 'SS' : 'S'} rank ${s.mark} · spotted ${relativeTime(s.spottedAt, now.value)}`,
+  })),
+  ...alertTrains.value.map((train) => {
     const running = train.startsAt <= now.value
     return {
       id: train.id,
-      rank: 'A',
+      rank: 'A' as const,
       running,
       world: train.world,
       dc: train.dc,
@@ -97,7 +106,7 @@ const alerts = computed<HuntAlert[]>(() =>
       text: `A rank train · ${running ? 'started' : 'starts'} ${relativeTime(train.startsAt, now.value)}`,
     }
   }),
-)
+])
 
 // Red for an S rank, the rarest and most urgent; for a train, like the dashboard's ribbons: green while it runs,
 // orange while it's still to come. Ant's own colours. A custom colour on 'processing' keeps its pulse (alone it's blue).

@@ -10,6 +10,7 @@ import trialIcon from '@/assets/trial.png'
 import ultimateIcon from '@/assets/ultimate.png'
 import nutsIcon from '@/assets/Sack_of_Nuts.png'
 import centurioIcon from '@/assets/Centurio_Seal.png'
+import alliedIcon from '@/assets/Allied_Seal.png'
 import poeticsIcon from '@/assets/Allagan_Tomestone_of_Poetics.png'
 import mathematicsIcon from '@/assets/Allagan_Tomestone_of_Mathematics.png'
 import { gearItemIds, gearItemNames } from '@/constants/gearItems'
@@ -48,6 +49,7 @@ export const equipmentStatusIcons: Record<EquipmentStatus, string> = {
 export const currencyIcons: Record<Currency, string> = {
   'Sacks of Nuts': nutsIcon,
   'Centurio Seals': centurioIcon,
+  'Allied Seals': alliedIcon,
   Poetics: poeticsIcon,
   Mathematics: mathematicsIcon,
   Mnemonics: tomeIcon,

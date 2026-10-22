@@ -41,6 +41,11 @@ export type HuntPage = { messages: HuntMessage[]; hasMore: boolean }
 export type HuntTrainMessage = Pick<HuntMessage, 'id' | 'channelName' | 'content' | 'pings' | 'createdAt'>
 export type HuntTrainList = { enabled: boolean; messages: HuntTrainMessage[] }
 
+// GET /api/hunts/sranks: the last day's S rank messages (newest first), with their embeds, which hold the zone,
+// spawn points and map image the Hunt Dashboard shows
+export type HuntSRankMessage = Pick<HuntMessage, 'id' | 'channelName' | 'content' | 'embeds' | 'createdAt'>
+export type HuntSRankList = { enabled: boolean; messages: HuntSRankMessage[] }
+
 // GET /api/hunts/meta?rank=<A|S>
 export type HuntMeta = {
   // False when neither pushing (HUNT_INGEST_SECRET) nor polling (bot token + channel) is configured
