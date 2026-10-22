@@ -19,6 +19,10 @@ import type {
   ReportPlayerDetailsQuery,
   ReportPlayerGraphQueryVariables,
   ReportPlayerGraphQuery,
+  CharacterUltimateKillsQuery,
+  CharacterUltimateKillsQueryVariables,
+  CharacterLookupQuery,
+  CharacterLookupQueryVariables,
 } from '@/api/__generated__/graphql'
 
 import rateLimitDataGql from '@/api/queries/rateLimitData.graphql?raw'
@@ -29,6 +33,8 @@ import reportPlayerSummary from '@/api/queries/reportPlayerSummary.graphql?raw'
 import worldDataTopPlayers from '@/api/queries/worldDataTopPlayers.graphql?raw'
 import reportPlayerByJob from '@/api/queries/reportPlayerDetails.graphql?raw'
 import reportPlayerGraph from '@/api/queries/reportPlayerGraph.graphql?raw'
+import characterUltimateKills from '@/api/queries/characterUltimateKills.graphql?raw'
+import characterLookup from '@/api/queries/characterLookup.graphql?raw'
 
 export function fetchRateLimitData(token: string) {
   return query<RateLimitDataQuery>(token, rateLimitDataGql)
@@ -61,4 +67,13 @@ export function fetchPlayerDetails(token: string, variables: ReportPlayerDetails
 
 export function fetchPlayerGraph(token: string, variables: ReportPlayerGraphQueryVariables) {
   return query<ReportPlayerGraphQuery, ReportPlayerGraphQueryVariables>(token, reportPlayerGraph, variables)
+}
+
+// Each alias (e<encounter id>) is that encounter's encounterRankings JSON, whose totalKills is what's used
+export function fetchCharacterUltimateKills(token: string, variables: CharacterUltimateKillsQueryVariables) {
+  return query<CharacterUltimateKillsQuery, CharacterUltimateKillsQueryVariables>(token, characterUltimateKills, variables)
+}
+
+export function fetchCharacterLookup(token: string, variables: CharacterLookupQueryVariables) {
+  return query<CharacterLookupQuery, CharacterLookupQueryVariables>(token, characterLookup, variables)
 }

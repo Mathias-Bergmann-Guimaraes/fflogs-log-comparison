@@ -11,7 +11,7 @@
     </a-tab-pane>
   </a-tabs>
 
-  <a-card size="small" class="mb-3" :body-style="{ padding: '14px 20px' }">
+  <a-card size="small" class="mb-3!" :body-style="{ padding: '14px 20px' }">
     <div class="flex flex-wrap items-center gap-x-8 gap-y-4">
       <div class="flex items-center gap-3">
         <a-progress type="circle" :percent="summary.percent" :size="48" :stroke-width="9" />
@@ -116,7 +116,6 @@
         <a-avatar :src="jobIconPath(record.job)" shape="square" :size="24" />
         {{ jobDisplayName(record.job) }}
       </a-space>
-      <a-typography-text v-else-if="column.key === 'role'" type="secondary" class="whitespace-nowrap">{{ record.role }}</a-typography-text>
       <!-- One slot per stage in the column (a joined stage sits next to the one it comes with), each clicked on its own -->
       <div v-else-if="column.stages" class="inline-flex gap-3 align-middle">
         <a-tooltip v-for="stage in column.stages" :key="stage" :title="stageHint(record.job, record.done, stage)" :mouse-enter-delay="0.4">
@@ -230,7 +229,7 @@ function select(key: string | number) {
 // The series' jobs, in role order like the rest of the tracker
 const rows = computed(() =>
   jobsByRole.flatMap((group) =>
-    group.jobs.filter((job) => active.value.jobs.includes(job)).map((job) => ({ job, role: group.role, done: relics.stagesDone(active.value, job) })),
+    group.jobs.filter((job) => active.value.jobs.includes(job)).map((job) => ({ job, done: relics.stagesDone(active.value, job) })),
   ),
 )
 
@@ -324,7 +323,6 @@ const stageColumns = computed(() => {
 
 const columns = computed<RelicColumn[]>(() => [
   { key: 'job', title: 'Job', fixed: 'left' },
-  { key: 'role', title: 'Role' },
   ...stageColumns.value,
   { key: 'progress', title: 'Progress', fixed: 'right' },
 ])

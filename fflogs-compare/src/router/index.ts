@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
 import HomeViewLayout from '@/views/HomeViewLayout.vue'
 import { markRaw, type Component } from 'vue'
-import { AimOutlined, AppstoreOutlined, BellOutlined, DashboardOutlined, StarOutlined, TrophyOutlined } from '@ant-design/icons-vue'
+import { AimOutlined, AppstoreOutlined, BellOutlined, DashboardOutlined, CrownOutlined, StarOutlined, TrophyOutlined } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/stores/authStore'
 
 declare module 'vue-router' {
@@ -18,7 +18,7 @@ declare module 'vue-router' {
 
 // Last BiS Tracker page opened (written by BisTrackerView); /bisTracker goes back to it
 export const BIS_PAGE_KEY = 'bis-tracker-page'
-const BIS_PAGES = ['bisDashboard', 'bisGear', 'bisRelics']
+const BIS_PAGES = ['bisDashboard', 'bisGear', 'bisRelics', 'bisUltimates']
 
 function lastBisPage() {
   try {
@@ -83,6 +83,12 @@ const router = createRouter({
               name: 'bisRelics',
               component: () => import('@/views/bis-tracker/RelicWeaponsView.vue'),
               meta: { menuLabel: 'Relic Weapons', menuIcon: markRaw(TrophyOutlined), requiresAuth: true },
+            },
+            {
+              path: 'ultimates',
+              name: 'bisUltimates',
+              component: () => import('@/views/bis-tracker/UltimateWeaponsView.vue'),
+              meta: { menuLabel: 'Ultimate Weapons', menuIcon: markRaw(CrownOutlined), requiresAuth: true },
             },
           ],
         },

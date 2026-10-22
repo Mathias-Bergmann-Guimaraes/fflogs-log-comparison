@@ -2,10 +2,27 @@
   <a-layout class="h-screen">
     <a-layout-header class="flex items-center justify-between">
       <span>FFXIV COMPANION</span>
-      <div v-if="auth.user" class="flex items-center gap-3">
-        <span class="text-gray-300">{{ auth.user.username }}</span>
-        <a-button size="small" @click="onLogout">Log out</a-button>
-      </div>
+      <!-- The username opens a menu: the profile (a modal) and logging out -->
+      <a-dropdown v-if="auth.user" placement="bottomRight" :trigger="['click']">
+        <a-button type="text" class="text-gray-300!">
+          <template #icon><user-outlined /></template>
+          {{ auth.user.username }}
+          <down-outlined class="text-xs" />
+        </a-button>
+        <template #overlay>
+          <a-menu @click="onUserMenuClick">
+            <a-menu-item key="profile">
+              <template #icon><idcard-outlined /></template>
+              Profile
+            </a-menu-item>
+            <a-menu-divider />
+            <a-menu-item key="logout">
+              <template #icon><logout-outlined /></template>
+              Log out
+            </a-menu-item>
+          </a-menu>
+        </template>
+      </a-dropdown>
       <a-button v-else-if="route.name !== 'login'" size="small" type="primary" @click="router.push({ name: 'login' })">Log in</a-button>
     </a-layout-header>
     <a-layout>
@@ -33,13 +50,17 @@
         <router-view />
       </a-layout-content>
     </a-layout>
+    <profile-modal v-if="auth.user" />
   </a-layout>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { DownOutlined, IdcardOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/stores/authStore'
+import { useProfileStore } from '@/stores/profileStore'
+import ProfileModal from './ProfileModal.vue'
 import { useHuntTrainsStore } from '@/stores/huntTrainsStore'
 
 const router = useRouter()
@@ -96,6 +117,13 @@ const trainDot = computed(() => {
     title: status === 'running' ? 'A hunt train is running' : 'A hunt train is announced',
   }
 })
+
+const profile = useProfileStore()
+
+function onUserMenuClick({ key }: { key: string | number }) {
+  if (key === 'profile') profile.modalOpen = true
+  else if (key === 'logout') void onLogout()
+}
 
 async function onLogout() {
   await auth.logout()
