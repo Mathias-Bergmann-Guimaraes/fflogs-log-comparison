@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { apiFetch } from '@/api/backend'
+import { useHuntAlertsStore } from '@/stores/huntAlertsStore'
 import type { HuntTrainList } from '@/types/hunts'
 import { fetchPingLabels } from '@/views/hunts/discordText'
 import { dedupeTrains, isActive, parseTrain, type Train } from '@/views/hunts/dashboard/trains'
@@ -8,7 +9,7 @@ import { dedupeTrains, isActive, parseTrain, type Train } from '@/views/hunts/da
 const REFRESH_MS = 60_000
 const TICK_MS = 15_000
 
-// The A rank trains, shared by the Hunt Dashboard and the side menu (which shows a dot while one is running or announced).
+// The A rank trains, shared by the Hunt Dashboard and the header's hunt alerts (a dot while a train the user asked for is on).
 // Kept fresh while anything watches it (see watch), so both read the same data from one poll.
 export const useHuntTrainsStore = defineStore('huntTrains', () => {
   const data = ref<HuntTrainList | null>(null)
@@ -37,12 +38,12 @@ export const useHuntTrainsStore = defineStore('huntTrains', () => {
   // Newest first, like the messages
   const trains = computed<Train[]>(() => dedupeTrains(parsed.value.filter((t) => t !== null)))
 
-  // 'running' when any train has started and isn't over, else 'announced' when one is still to come, else null
-  const activeStatus = computed<'running' | 'announced' | null>(() => {
-    const active = trains.value.filter((t) => isActive(t, now.value))
-    if (!active.length) return null
-    return active.some((t) => t.startsAt <= now.value) ? 'running' : 'announced'
-  })
+  // For the header's hunt alerts, only the trains the user's alert rules ask for (all of these are A ranks).
+  // Running or still to come, soonest first: running ones (oldest start on top), then announced.
+  const alerts = useHuntAlertsStore()
+  const alertTrains = computed(() =>
+    trains.value.filter((t) => isActive(t, now.value) && alerts.matches('A', t.dc)).sort((a, b) => a.startsAt - b.startsAt),
+  )
 
   // Starts polling on the first watcher and stops after the last one; returns the function that stops watching
   let watchers = 0
@@ -67,5 +68,5 @@ export const useHuntTrainsStore = defineStore('huntTrains', () => {
     error.value = null
   }
 
-  return { data, labels, loading, error, now, parsed, trains, activeStatus, load, watch, clear }
+  return { data, labels, loading, error, now, parsed, trains, alertTrains, load, watch, clear }
 })

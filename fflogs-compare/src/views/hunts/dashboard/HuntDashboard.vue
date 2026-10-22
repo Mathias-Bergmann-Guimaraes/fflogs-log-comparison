@@ -19,6 +19,10 @@
         <a-typography-text type="secondary" class="cursor-help text-xs">· {{ unparsed }} posts skipped</a-typography-text>
       </a-tooltip>
       <div class="flex-1" />
+      <a-button @click="alertsOpen = true">
+        <template #icon><BellOutlined /></template>
+        Alerts
+      </a-button>
       <a-button :loading="loading" @click="load"><template #icon><ReloadOutlined /></template></a-button>
     </div>
 
@@ -56,13 +60,15 @@
       </a-col>
     </a-row>
   </a-spin>
+
+  <HuntAlertsModal v-model:open="alertsOpen" />
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { message } from 'ant-design-vue'
-import { ReloadOutlined } from '@ant-design/icons-vue'
+import { BellOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { useHuntTrainsStore } from '@/stores/huntTrainsStore'
 import { DATA_CENTERS, TRAIN_TYPES, lastTrains, trainTypeOfLabel } from './trains'
 import TrainKpis from './TrainKpis.vue'
@@ -72,6 +78,7 @@ import NextTrainCard from './NextTrainCard.vue'
 import LastTrainTable from './LastTrainTable.vue'
 import TrainHeatmap from './TrainHeatmap.vue'
 import TopConductors from './TopConductors.vue'
+import HuntAlertsModal from './HuntAlertsModal.vue'
 
 // Loaded and kept fresh by the store, which the side menu also reads
 const trainsStore = useHuntTrainsStore()
@@ -79,6 +86,9 @@ const { data, labels, loading, error, now, parsed, trains } = storeToRefs(trains
 const { load } = trainsStore
 
 watch(error, (err) => err && message.error(err))
+
+// Which trains ring the bell in the header; also editable from there
+const alertsOpen = ref(false)
 
 const unparsed = computed(() => parsed.value.filter((t) => !t).length)
 const last = computed(() => lastTrains(trains.value))

@@ -2,28 +2,32 @@
   <a-layout class="h-screen">
     <a-layout-header class="flex items-center justify-between">
       <span>FFXIV COMPANION</span>
-      <!-- The username opens a menu: the profile (a modal) and logging out -->
-      <a-dropdown v-if="auth.user" placement="bottomRight" :trigger="['click']">
-        <a-button type="text" class="text-gray-300!">
-          <template #icon><user-outlined /></template>
-          {{ auth.user.username }}
-          <down-outlined class="text-xs" />
-        </a-button>
-        <template #overlay>
-          <a-menu @click="onUserMenuClick">
-            <a-menu-item key="profile">
-              <template #icon><idcard-outlined /></template>
-              Profile
-            </a-menu-item>
-            <a-menu-divider />
-            <a-menu-item key="logout">
-              <template #icon><logout-outlined /></template>
-              Log out
-            </a-menu-item>
-          </a-menu>
-        </template>
-      </a-dropdown>
-      <a-button v-else-if="route.name !== 'login'" size="small" type="primary" @click="router.push({ name: 'login' })">Log in</a-button>
+      <div class="flex items-center gap-1">
+        <!-- Hunt trains the user asked for, seen from every page -->
+        <hunt-alerts-bell v-if="watchingHunts" />
+        <!-- The username opens a menu: the profile (a modal) and logging out -->
+        <a-dropdown v-if="auth.user" placement="bottomRight" :trigger="['click']">
+          <a-button type="text" class="text-gray-300!">
+            <template #icon><user-outlined /></template>
+            {{ auth.user.username }}
+            <down-outlined class="text-xs" />
+          </a-button>
+          <template #overlay>
+            <a-menu @click="onUserMenuClick">
+              <a-menu-item key="profile">
+                <template #icon><idcard-outlined /></template>
+                Profile
+              </a-menu-item>
+              <a-menu-divider />
+              <a-menu-item key="logout">
+                <template #icon><logout-outlined /></template>
+                Log out
+              </a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
+        <a-button v-else-if="route.name !== 'login'" size="small" type="primary" @click="router.push({ name: 'login' })">Log in</a-button>
+      </div>
     </a-layout-header>
     <a-layout>
       <a-layout-sider>
@@ -33,12 +37,10 @@
             <a-sub-menu v-if="item.pages.length" :key="String(item.name)">
               <template #title>
                 {{ item.meta.menuLabel }}
-                <a-badge v-if="trainDot?.key === String(item.name)" :status="trainDot.status" :title="trainDot.title" class="ms-1" />
               </template>
               <a-menu-item v-for="page in item.pages" :key="String(page.name)">
                 <template v-if="page.meta?.menuIcon" #icon><component :is="page.meta?.menuIcon" /></template>
                 {{ page.meta?.menuLabel }}
-                <a-badge v-if="trainDot?.key === String(page.name)" :status="trainDot.status" :title="trainDot.title" class="ms-1" />
               </a-menu-item>
             </a-sub-menu>
             <a-menu-item v-else :key="String(item.name)">{{ item.meta.menuLabel }}</a-menu-item>
@@ -62,6 +64,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useProfileStore } from '@/stores/profileStore'
 import ProfileModal from './ProfileModal.vue'
 import { useHuntTrainsStore } from '@/stores/huntTrainsStore'
+import HuntAlertsBell from './hunts/HuntAlertsBell.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -93,30 +96,20 @@ watch(
 
 auth.ensureLoaded()
 
-// While a hunt train is running or announced, a dot on the Hunt Tracker submenu, or on its Train dashboard page
-// when the submenu is open. Trains are only served to signed-in users, so they're polled while someone is.
+// Hunt trains are polled while someone with the Hunt Tracker is signed in, for the bell in the header
 const huntTrains = useHuntTrainsStore()
+const watchingHunts = computed(() => !!auth.user && auth.hasFeature('hunts'))
 let stopWatchingTrains: (() => void) | null = null
 watch(
-  () => auth.user,
-  (user) => {
+  watchingHunts,
+  (watching) => {
     stopWatchingTrains?.()
     stopWatchingTrains = null
-    if (user) stopWatchingTrains = huntTrains.watch()
+    if (watching) stopWatchingTrains = huntTrains.watch()
     else huntTrains.clear()
   },
   { immediate: true },
 )
-const trainDot = computed(() => {
-  const status = huntTrains.activeStatus
-  if (!status || !auth.user) return null
-  return {
-    key: openKeys.value.includes('hunts') ? 'huntsDashboard' : 'hunts',
-    // Like the dashboard: pulsing for a running train, orange for one still to come
-    status: status === 'running' ? ('processing' as const) : ('warning' as const),
-    title: status === 'running' ? 'A hunt train is running' : 'A hunt train is announced',
-  }
-})
 
 const profile = useProfileStore()
 
