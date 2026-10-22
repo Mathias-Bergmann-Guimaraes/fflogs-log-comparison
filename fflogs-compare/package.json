@@ -4,10 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "npm run codegen",
     "dev": "run-p dev:*",
     "dev:web": "vite",
     "dev:admin": "vite --config vite.admin.config.ts",
     "dev:server": "tsx watch --env-file-if-exists=.env --experimental-sqlite server/index.ts",
+    "prebuild": "npm run codegen",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build && vite build --config vite.admin.config.ts",
@@ -19,7 +21,8 @@
     "gear-icons": "node --experimental-strip-types scripts/gear-icons.ts && prettier --write src/constants/gearItems.ts",
     "admin": "node --env-file-if-exists=.env --experimental-sqlite --experimental-strip-types scripts/admin.ts",
     "fake-hunt": "node --env-file-if-exists=.env --experimental-strip-types scripts/fake-hunt.ts",
-    "codegen":"node --env-file=.env node_modules/@graphql-codegen/cli/cjs/bin.js --config codegen.ts",
+    "codegen": "graphql-codegen --config codegen.ts",
+    "schema:update": "node --env-file-if-exists=.env --experimental-strip-types scripts/update-schema.ts",
     "start": "node --env-file-if-exists=.env --experimental-sqlite --experimental-strip-types server/index.ts"
   },
   "dependencies": {
