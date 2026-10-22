@@ -16,6 +16,12 @@
   scrollbar-color: #434343 transparent;
 }
 
+/* The same thin dark scrollbar on a table that scrolls sideways (BiS Relic Weapons stages) */
+.thin-scroll-table .ant-table-content {
+  scrollbar-width: thin;
+  scrollbar-color: #434343 transparent;
+}
+
 /* Tailwind's preflight gives every <svg> `vertical-align: middle`, which pushes Ant's icons a few px
    below the text they sit next to (Ant positions them from the baseline). Put them back on it. */
 .anticon > svg {

@@ -105,12 +105,13 @@ export const useItemCatalogStore = defineStore('itemCatalog', () => {
     return pending.get(key)!
   }
 
-  // Details for items not seen yet (pinned or imported ones). Best effort, like loadRange.
+  // Details for items not seen yet (pinned or imported ones, a relic series' weapons). Best effort, like loadRange.
+  // XIVAPI returns 100 rows unless told otherwise; a relic series asks for up to 240.
   async function ensureItems(ids: readonly number[]) {
     const unknown = [...new Set(ids)].filter((id) => !items.value[id])
     if (!unknown.length) return
     try {
-      const res = await fetch(`${API}/sheet/Item?${new URLSearchParams({ rows: unknown.join(','), fields: FIELDS })}`)
+      const res = await fetch(`${API}/sheet/Item?${new URLSearchParams({ rows: unknown.join(','), fields: FIELDS, limit: '500' })}`)
       if (!res.ok) throw new Error(`XIVAPI returned ${res.status}`)
       remember(((await res.json()) as { rows: Row[] }).rows)
     } catch (err) {

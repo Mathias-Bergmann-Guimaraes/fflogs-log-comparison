@@ -1,5 +1,5 @@
 <template>
-  <!-- Shared by the BiS Tracker pages (Dashboard, Gear sets in the side menu): loads the BiS progress once for both -->
+  <!-- Shared by the BiS Tracker pages (Dashboard, Gear sets, Relic Weapons in the side menu): loads the BiS progress once for all -->
   <div class="p-5">
     <a-alert v-if="loadError" type="error" :message="`Couldn't load your BiS progress: ${loadError}`" show-icon class="mb-4" />
     <a-spin v-else-if="bis.loading || !gearSetsLoaded" class="block py-10" />
@@ -7,7 +7,8 @@
       <div class="mb-4 flex min-h-8 flex-wrap items-center justify-between gap-3">
         <a-typography-title :level="4" class="m-0!">{{ route.meta.menuLabel }}</a-typography-title>
         <a-space wrap>
-          <a-button @click="importOpen = true">
+          <!-- Relic Weapons has nothing to import into -->
+          <a-button v-if="route.name !== 'bisRelics'" @click="importOpen = true">
             <template #icon><import-outlined /></template>
             Import from xivgear
           </a-button>
