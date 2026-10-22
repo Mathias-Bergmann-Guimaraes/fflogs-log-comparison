@@ -113,7 +113,7 @@ import { AimOutlined, EnvironmentOutlined, GiftOutlined, UserOutlined } from '@a
 import { currencyIcons } from '@/constants/icons'
 import { relativeTime } from '../discordText'
 import { DC_COLORS } from './trains'
-import { EXPANSIONS, S_RANK_UP_MS, isUp, sRankRewards, type SRank } from './sRanks'
+import { EXPANSIONS, isUp, sRankRewards, upMs, type SRank } from './sRanks'
 
 const props = defineProps<{ sRanks: SRank[]; now: number }>()
 
@@ -134,11 +134,11 @@ const S_RANK_COLOR = '#f5222d'
 
 // How much of the time it counts as up has passed (an estimate: the feed doesn't say when it dies).
 // The bar shows what's left, kept above 0 and under 100, where Ant would switch it to its "success" look.
-const shownPercent = (sRank: SRank) => Math.min(99.5, Math.max(0.5, ((tick.value - sRank.spottedAt) / S_RANK_UP_MS) * 100))
+const shownPercent = (sRank: SRank) => Math.min(99.5, Math.max(0.5, ((tick.value - sRank.spottedAt) / upMs(sRank)) * 100))
 
 // m:ss until the card hides
 function hidesIn(sRank: SRank) {
-  const seconds = Math.max(0, Math.floor((sRank.spottedAt + S_RANK_UP_MS - tick.value) / 1000))
+  const seconds = Math.max(0, Math.floor((sRank.spottedAt + upMs(sRank) - tick.value) / 1000))
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 </script>
