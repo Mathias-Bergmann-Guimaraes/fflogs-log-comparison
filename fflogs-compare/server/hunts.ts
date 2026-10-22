@@ -152,7 +152,9 @@ async function sync() {
     const query = newestId ? `?limit=100&after=${newestId}` : '?limit=100'
     const batch = await discordGet<DiscordMessage[]>(`/channels/${CHANNEL_ID}/messages${query}`)
     if (!batch.length) break
-    transaction(() => batch.filter((m) => CONTENT_TYPES.has(m.type)).forEach(save))
+    const saved = batch.filter((m) => CONTENT_TYPES.has(m.type))
+    transaction(() => saved.forEach(save))
+    void keepImages(saved.map((m) => m.id))
     const backfill = newestId === undefined
     newestId = maxId(batch.map((m) => m.id))
     if (backfill || batch.length < 100) break
@@ -274,6 +276,65 @@ function hasIngestSecret(header: string | undefined) {
   return timingSafeEqual(digest(header.slice(7)), digest(INGEST_SECRET!))
 }
 
+// --- Images ---
+
+// Discord's attachment links are signed and stop working after about a day, so the map of each S rank post is
+// fetched as soon as the post arrives and kept in hunt_images (only S ranks: their map is the card's picture).
+// Faloop's map shows the mark's spawn point, so posts of the same S rank at the same spot share one image: there are
+// only as many as there are spawn points, however many posts come in.
+const IMAGE_MAX_BYTES = 8 * 1024 * 1024
+const IMAGE_TIMEOUT_MS = 15_000
+
+// The embed's text without its world line (the rest names the mark, zone and spawn points), hashed. Null without a map.
+function imageKey(embed: HuntEmbed | undefined): string | null {
+  if (!embed?.image || !embed.description) return null
+  const place = embed.description
+    .split('\n')
+    .filter((line) => !line.includes('🌍'))
+    .join('\n')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return createHash('sha256').update(place).digest('hex').slice(0, 32)
+}
+
+const hasImage = (key: string) => !!db.prepare('SELECT 1 FROM hunt_images WHERE key = ?').get(key)
+
+async function keepImages(ids: string[]) {
+  const sIds = new Set(channelIdsByRank().S)
+  for (const id of ids) {
+    const row = db.prepare('SELECT channel_id, embeds FROM hunt_messages WHERE id = ?').get(id) as
+      | { channel_id: string | null; embeds: string }
+      | undefined
+    if (!row?.channel_id || !sIds.has(row.channel_id)) continue
+    const embed = (JSON.parse(row.embeds) as HuntEmbed[])[0]
+    const key = imageKey(embed)
+    if (!key || hasImage(key)) continue
+    try {
+      const res = await fetch(embed!.image!, { signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS) })
+      const type = res.headers.get('content-type') ?? ''
+      if (!res.ok || !type.startsWith('image/')) throw new Error(`${res.status} ${type}`)
+      const data = new Uint8Array(await res.arrayBuffer())
+      if (data.byteLength > IMAGE_MAX_BYTES) throw new Error(`${data.byteLength} bytes`)
+      db.prepare('INSERT OR IGNORE INTO hunt_images (key, content_type, data, fetched_at) VALUES (?, ?, ?, ?)').run(
+        key,
+        type,
+        data,
+        Date.now(),
+      )
+    } catch (err) {
+      // The post still shows, with Discord's link while it lasts
+      console.error(`Hunt image for ${id} not kept:`, err instanceof Error ? err.message : err)
+    }
+  }
+}
+
+// The first embed's image pointed at our copy, when there is one
+function withOwnImage(embeds: HuntEmbed[]): HuntEmbed[] {
+  const key = imageKey(embeds[0])
+  if (!key || !hasImage(key)) return embeds
+  return [{ ...embeds[0]!, image: `/api/hunts/images/${key}` }, ...embeds.slice(1)]
+}
+
 export const hunts = new Hono<AuthEnv>()
 
 // Registered before requireAuth, which would otherwise answer first: these use the shared secret instead of a session.
@@ -284,7 +345,9 @@ hunts.post('/ingest', bodyLimit({ maxSize: 1024 * 1024 }), async (c) => {
   const body = await c.req.json().catch(() => undefined)
   const messages = (Array.isArray(body) ? body : [body]).map(toDiscordMessage)
   if (!messages.length || messages.some((m) => !m)) return c.json({ error: 'Expected a Discord message object or an array of them' }, 400)
-  transaction(() => (messages as DiscordMessage[]).filter((m) => CONTENT_TYPES.has(m.type)).forEach(save))
+  const saved = (messages as DiscordMessage[]).filter((m) => CONTENT_TYPES.has(m.type))
+  transaction(() => saved.forEach(save))
+  void keepImages(saved.map((m) => m.id))
   lastPushAt = Date.now()
   const first = messages[0]!
   console.log(`Hunt ingest: ${messages.length} message(s), first ${first.id} in #${first.channel_name ?? first.channel_id ?? '?'}`)
@@ -405,11 +468,20 @@ hunts.get('/sranks', (c) => {
       id: r.id,
       channelName: r.channel_name,
       content: r.content,
-      embeds: JSON.parse(r.embeds),
+      embeds: withOwnImage(JSON.parse(r.embeds)),
       createdAt: r.created_at,
     })),
   }
   return c.json(list)
+})
+
+// Our copy of an S rank spawn point's map (see keepImages). Never changes, so the browser can keep it.
+hunts.get('/images/:key', (c) => {
+  const row = db.prepare('SELECT content_type, data FROM hunt_images WHERE key = ?').get(c.req.param('key')) as
+    | { content_type: string; data: Uint8Array }
+    | undefined
+  if (!row) return c.json({ error: 'Not found' }, 404)
+  return c.body(row.data as Uint8Array<ArrayBuffer>, 200, { 'Content-Type': row.content_type, 'Cache-Control': 'private, max-age=31536000, immutable' })
 })
 
 // ?rank=A|S limits the pings and channels to that rank's channels, like the list above

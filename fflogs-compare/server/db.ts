@@ -180,6 +180,17 @@ const migrations: string[] = [
     PRIMARY KEY (user_id, feature)
   );
   `,
+  // 11: our own copy of the S rank posts' maps (server/hunts.ts). Discord's image links are signed and expire after
+  // about a day, so the image is fetched while the link is fresh and served from here. One per S rank and spawn
+  // point (key: see imageKey), shared by every post of it, so there are only ever as many as there are spawn points.
+  `
+  CREATE TABLE hunt_images (
+    key          TEXT PRIMARY KEY,
+    content_type TEXT NOT NULL,
+    data         BLOB NOT NULL,
+    fetched_at   INTEGER NOT NULL
+  );
+  `,
 ]
 
 // node:sqlite has no transaction helper; synchronous fn only, so nothing else can interleave
