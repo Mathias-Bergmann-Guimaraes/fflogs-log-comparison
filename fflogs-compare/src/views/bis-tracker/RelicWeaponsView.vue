@@ -58,17 +58,8 @@
             </div>
           </div>
         </a-tooltip>
-        <!-- Hunt trains pay these tomestones; only for accounts that can open the Hunt Tracker. Hidden rather than
-             removed once nothing is needed, so the card keeps its size. -->
-        <a-tooltip v-if="huntsPage && trainsFor(c.currency, c.needed)">
-          <template #title>
-            <div v-for="line in trainsFor(c.currency, c.needed)!.lines" :key="line">{{ line }}</div>
-          </template>
-          <a-button size="small" :class="c.needed === 0 && 'invisible'" :tabindex="c.needed === 0 ? -1 : undefined" @click="router.push(huntsPage)">
-            <template #icon><aim-outlined /></template>
-            ≈ {{ trainsFor(c.currency, c.needed)!.range }} hunt trains
-          </a-button>
-        </a-tooltip>
+        <!-- Hunt trains and S ranks pay these tomestones; it shrinks to the room left on the line rather than wrap -->
+        <hunt-tomes-estimate :currency="c.currency" :needed="c.needed" />
       </template>
     </div>
   </a-card>
@@ -161,7 +152,7 @@
 import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { TableColumnType } from 'ant-design-vue'
-import { AimOutlined, CheckCircleFilled } from '@ant-design/icons-vue'
+import { CheckCircleFilled } from '@ant-design/icons-vue'
 import { relicSeries, type StageCost, type StageItem } from '@/constants/relicWeapons'
 import { currencyIcons } from '@/constants/icons'
 import { equipmentStatuses } from '@/constants/equipmentStatus'
@@ -169,41 +160,13 @@ import { EquipmentStatus } from '@/types/EquipmentType'
 import relicIcon from '@/assets/relic.png'
 import { jobDisplayName, jobsByRole } from '@/constants/jobs'
 import { MAX_STONES, useRelicStore } from '@/stores/relicStore'
-import { useAuthStore } from '@/stores/authStore'
-import { DEFAULT_MARKS, MARK_REWARDS, TRAIN_TYPES, type Currency } from '@/views/hunts/dashboard/trains'
+import HuntTomesEstimate from '@/views/hunts/HuntTomesEstimate.vue'
 import { useItemCatalogStore } from '@/stores/itemCatalogStore'
 import CheckIcon from './CheckIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
 const relics = useRelicStore()
-const auth = useAuthStore()
-
-// The hunt train dashboard, if this account may open it: the router's own check (a route's `feature` meta), so the
-// button goes when the menu entry does
-const huntsPage = computed(() => {
-  const target = router.resolve({ name: 'huntsDashboard' })
-  return target.matched.every((r) => !r.meta.feature || auth.hasFeature(r.meta.feature)) ? target : null
-})
-
-// Roughly how many hunt trains pay `needed` of a currency, from the hunt dashboard's own rewards: a full train
-// (DEFAULT_MARKS A ranks) of the best-paying expansion for the fewest, of the worst-paying one for the most.
-// null when no train pays it. The tooltip lines spell out the assumption.
-function trainsFor(currency: Currency, needed: number): { range: string; lines: string[] } | null {
-  const paying = TRAIN_TYPES.map((t) => ({ ...t, perMark: MARK_REWARDS[t.key][currency] ?? 0 })).filter((t) => t.perMark > 0)
-  if (!paying.length) return null
-  const perMarks = paying.map((t) => t.perMark)
-  const fewest = Math.ceil(needed / (Math.max(...perMarks) * DEFAULT_MARKS))
-  const most = Math.ceil(needed / (Math.min(...perMarks) * DEFAULT_MARKS))
-  return {
-    range: fewest === most ? fewest.toLocaleString() : `${fewest.toLocaleString()}–${most.toLocaleString()}`,
-    lines: [
-      `For the ${needed.toLocaleString()} ${currency} still needed, at ${DEFAULT_MARKS} A ranks a train:`,
-      ...paying.map((t) => `${t.expansion}: ${t.perMark} each, ${(t.perMark * DEFAULT_MARKS).toLocaleString()} a train`),
-      'Only paid on a level-capped job. S ranks and FATEs not counted. Click for the train dashboard.',
-    ],
-  }
-}
 
 const jobIconPath = (job: string) => `/job/${job}.png`
 // The BiS card's slot borders: an unbought relic's grey, an acquired piece's green

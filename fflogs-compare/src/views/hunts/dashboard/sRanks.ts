@@ -22,7 +22,7 @@ export const EXPANSIONS: Record<ExpansionKey, { label: string; name: string; col
 
 // What one S (or SS) rank pays (https://ffxiv.consolegameswiki.com/wiki/The_Hunt). SS ranks only exist from
 // Shadowbringers on. Mathematics and Mnemonics only drop on a level-capped job, so those are the most it can give.
-const S_REWARDS: Record<ExpansionKey, Partial<Record<Currency, number>>> = {
+export const S_REWARDS: Record<ExpansionKey, Partial<Record<Currency, number>>> = {
   2: { 'Allied Seals': 100, Poetics: 100, Mathematics: 30 },
   3: { 'Centurio Seals': 100, Poetics: 100, Mathematics: 30 },
   4: { 'Centurio Seals': 100, Poetics: 100, Mathematics: 30 },
