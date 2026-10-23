@@ -55,16 +55,10 @@ export type SRank = {
   spottedAt: number
 }
 
-// The feed never says when one dies, so an S rank counts as up this long after it's reported. The current expansion's
-// draw a crowd that takes a few minutes to gather; older ones die almost as soon as they're called. One of unknown
-// expansion gets the longer time, so it isn't hidden too soon.
-export const LATEST_EXPANSION: ExpansionKey = 7
-const LATEST_UP_MS = 5 * 60_000
-const OLDER_UP_MS = 2 * 60_000
+// The feed never says when one dies, so an S rank counts as up this long after it's reported, whatever its expansion
+export const UP_MS = 5 * 60_000
 
-export const upMs = (sRank: SRank) => (sRank.expansion && sRank.expansion < LATEST_EXPANSION ? OLDER_UP_MS : LATEST_UP_MS)
-
-export const isUp = (sRank: SRank, now: number) => now < sRank.spottedAt + upMs(sRank)
+export const isUp = (sRank: SRank, now: number) => now < sRank.spottedAt + UP_MS
 
 // English only: Faloop adds the French and German names in ［full-width brackets］, and custom emojis are dropped
 const english = (text: string) =>

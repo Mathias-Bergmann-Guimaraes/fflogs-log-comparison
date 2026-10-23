@@ -50,8 +50,20 @@
       <a-col :xs="24" :xl="12">
         <div class="flex h-full flex-col gap-4">
           <HuntSection title="S ranks" :count="sRankUpCount" color="#f5222d">
-            <template #extra><HuntFilter v-model="filters.s" :groups="S_FILTERS" /></template>
-            <SRankCards :s-ranks="shownSRanks" :now="now" />
+            <template #extra>
+              <div class="flex items-center gap-1">
+                <HuntPin v-model="pinned" :options="S_EXPANSION_OPTIONS" />
+                <HuntFilter v-model="filters.s" :groups="S_FILTERS" />
+              </div>
+            </template>
+            <SRankCards
+              :s-ranks="shownSRanks"
+              :now="now"
+              :pinned="pinned ? (Number(pinned) as ExpansionKey) : null"
+              :only-expansion="filters.s.expansion?.length === 1 ? (Number(filters.s.expansion[0]) as ExpansionKey) : null"
+              @pin="(e) => (pinned = pinned === String(e) ? null : String(e))"
+              @filter="toggleOnlyExpansion"
+            />
           </HuntSection>
           <DcSparkline :events="sRankEvents" :now="now" label="S ranks" caption="S ranks reported per hour, last 24 hours" />
         </div>
@@ -83,12 +95,13 @@ import { storeToRefs } from 'pinia'
 import { message } from 'ant-design-vue'
 import { BellOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { useHuntTrainsStore } from '@/stores/huntTrainsStore'
-import { DATA_CENTERS, TRAIN_TYPES, isActive, lastTrains, trainTypeOfLabel } from './trains'
-import { EXPANSIONS, isUp } from './sRanks'
+import { DATA_CENTERS, DC_COLORS, TRAIN_TYPES, isActive, lastTrains, trainTypeOfLabel } from './trains'
+import { EXPANSIONS, isUp, type ExpansionKey } from './sRanks'
 import TrainKpis from './TrainKpis.vue'
 import DcSparkline from './DcSparkline.vue'
 import HuntSection from './HuntSection.vue'
 import HuntFilter, { type FilterGroup, type FilterValue } from './HuntFilter.vue'
+import HuntPin from './HuntPin.vue'
 import SRankCards from './SRankCards.vue'
 import UpcomingTrains from './UpcomingTrains.vue'
 import NextTrainCard from './NextTrainCard.vue'
@@ -109,21 +122,20 @@ const alertsOpen = ref(false)
 
 const unparsed = computed(() => parsed.value.filter((t) => !t).length)
 const last = computed(() => lastTrains(trains.value))
-// Which DCs and expansions each side's cards show (the charts always show everything), remembered per browser
-const DC_OPTIONS = DATA_CENTERS.map((dc) => ({ value: dc.name, label: dc.name }))
+// Which DCs and expansions each side's cards show (the charts always show everything), remembered per browser.
+// Expansions by number only, the name on hover.
+const DC_OPTIONS =DATA_CENTERS.map((dc) => ({ value: dc.name, label: dc.name, dot: DC_COLORS[dc.name] }))
 const A_FILTERS: FilterGroup[] = [
   { key: 'dc', label: 'Data center', options: DC_OPTIONS },
-  { key: 'expansion', label: 'Expansion', options: TRAIN_TYPES.map((t) => ({ value: t.key, label: `${t.label} ${t.expansion}` })) },
+  { key: 'expansion', label: 'Expansion', options: TRAIN_TYPES.map((t) => ({ value: t.key, label: t.label, title: t.expansion, color: t.color })) },
 ]
+// Newest first
+const S_EXPANSION_OPTIONS = Object.entries(EXPANSIONS)
+  .map(([key, e]) => ({ value: key, label: e.label, title: e.name, color: e.color }))
+  .reverse()
 const S_FILTERS: FilterGroup[] = [
   { key: 'dc', label: 'Data center', options: DC_OPTIONS },
-  {
-    key: 'expansion',
-    label: 'Expansion',
-    options: Object.entries(EXPANSIONS)
-      .map(([key, e]) => ({ value: key, label: `${e.label} ${e.name}` }))
-      .reverse(),
-  },
+  { key: 'expansion', label: 'Expansion', options: S_EXPANSION_OPTIONS },
 ]
 
 const FILTERS_KEY = 'huntDashboardFilters'
@@ -147,6 +159,33 @@ watch(
   },
   { deep: true },
 )
+
+// The expansion whose S ranks are pinned above the others while up, remembered per browser like the filters.
+// The same chips as the filter's.
+const PIN_KEY = 'huntDashboardSRankPin'
+const pinned = ref<string | null>(readPin())
+function readPin() {
+  try {
+    const saved = localStorage.getItem(PIN_KEY)
+    return saved && saved in EXPANSIONS ? saved : null
+  } catch {
+    return null
+  }
+}
+watch(pinned, (value) => {
+  try {
+    if (value) localStorage.setItem(PIN_KEY, value)
+    else localStorage.removeItem(PIN_KEY)
+  } catch {
+    // Not remembered then; it still pins
+  }
+})
+
+// From a card's expansion tag: show only that expansion, or everything again if that's already all it shows
+function toggleOnlyExpansion(expansion: ExpansionKey) {
+  const only = filters.value.s.expansion?.length === 1 && filters.value.s.expansion[0] === String(expansion)
+  filters.value.s = { ...filters.value.s, expansion: only ? [] : [String(expansion)] }
+}
 
 // An empty group lets everything through; with expansions ticked, a train or S rank of unknown expansion is left out
 const passes = (ticked: string[] | undefined, values: string[]) => !ticked?.length || values.some((v) => ticked.includes(v))

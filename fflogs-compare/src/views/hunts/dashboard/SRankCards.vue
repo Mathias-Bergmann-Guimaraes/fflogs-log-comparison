@@ -32,10 +32,12 @@
     </template>
   </div>
   <!-- Cards as tall as the A rank trains' (min-h-64), and two of them at most (33rem) before the rest scroll, so both
-       sides show two rows. Room on the right for the ribbons, which stick out of the cards. -->
-  <div v-else class="flex max-h-132 flex-col gap-4 overflow-x-hidden overflow-y-auto pe-2 [scrollbar-color:#434343_transparent] [scrollbar-width:thin]">
+       sides show two rows. Room on the right for the ribbons, which stick out of the cards, and all round for the
+       pinned cards' glow (the negative margin keeps the cards where they were). -->
+  <div v-else class="-m-1.5 flex max-h-135 flex-col gap-4 overflow-x-hidden overflow-y-auto p-1.5 pe-3.5 [scrollbar-color:#434343_transparent] [scrollbar-width:thin]">
     <a-badge-ribbon v-for="sRank in up" :key="sRank.id" :text="sRank.ss ? 'SS rank' : 'S rank'" :color="S_RANK_COLOR">
-      <a-card size="small" class="min-h-64">
+      <!-- Pinned ones get a gold border, like the favorite jobs' cards on the BiS tracker -->
+      <a-card size="small" :class="['min-h-64', isPinned(sRank) && 'border-amber-400! shadow-[0_0_12px_rgba(251,191,36,0.25)]']">
         <!-- Horizontal: the post's map on the left (click to enlarge), the details on the right; stacked on a phone -->
         <div class="flex flex-col gap-4 sm:flex-row">
           <div v-if="sRank.image" class="mx-auto size-58 shrink-0 overflow-hidden rounded-md bg-black/30 sm:mx-0">
@@ -45,7 +47,9 @@
           <div class="flex min-w-0 flex-1 flex-col">
             <!-- Where, which mark and which expansion -->
             <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 pe-16">
-              <span class="truncate text-xl leading-tight font-semibold">{{ sRank.world }}</span>
+              <span class="truncate text-xl leading-tight font-semibold">
+                <a-tooltip v-if="isPinned(sRank)" title="Pinned expansion"><PushpinFilled class="me-1.5 text-base text-amber-400" /></a-tooltip>{{ sRank.world }}
+              </span>
               <span class="flex items-center gap-1.5 text-sm">
                 <span class="inline-block size-2 rounded-full" :style="{ background: DC_COLORS[sRank.dc] }" />
                 <span :style="{ color: DC_COLORS[sRank.dc] }">{{ sRank.dc }}</span>
@@ -55,9 +59,24 @@
             <div class="mt-1 flex flex-wrap items-center gap-2">
               <span class="inline-flex items-center gap-1.5 font-medium"><AimOutlined class="text-gray-400" />{{ sRank.mark }}</span>
               <a-tag v-if="sRank.instance" class="me-0! font-semibold">Instance {{ sRank.instance }}</a-tag>
-              <a-tag v-if="sRank.expansion" :color="EXPANSIONS[sRank.expansion].color" class="me-0! font-semibold">
-                {{ EXPANSIONS[sRank.expansion].label }} {{ EXPANSIONS[sRank.expansion].name }}
-              </a-tag>
+              <!-- Click for the pin and the filter, set to this expansion -->
+              <a-dropdown v-if="sRank.expansion" :trigger="['click']">
+                <a-tag :color="EXPANSIONS[sRank.expansion].color" class="me-0! cursor-pointer font-semibold">
+                  {{ EXPANSIONS[sRank.expansion].label }} {{ EXPANSIONS[sRank.expansion].name }}
+                </a-tag>
+                <template #overlay>
+                  <a-menu>
+                    <a-menu-item key="pin" @click="emit('pin', sRank.expansion!)">
+                      <template #icon><PushpinOutlined /></template>
+                      {{ pinned === sRank.expansion ? 'Unpin' : 'Pin first' }} {{ EXPANSIONS[sRank.expansion].label }}
+                    </a-menu-item>
+                    <a-menu-item key="filter" @click="emit('filter', sRank.expansion!)">
+                      <template #icon><FilterOutlined /></template>
+                      {{ onlyExpansion === sRank.expansion ? 'Show all expansions' : `Show only ${EXPANSIONS[sRank.expansion].label}` }}
+                    </a-menu-item>
+                  </a-menu>
+                </template>
+              </a-dropdown>
             </div>
 
             <a-divider class="my-2!" />
@@ -111,16 +130,23 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { Empty } from 'ant-design-vue'
-import { AimOutlined, EnvironmentOutlined, GiftOutlined, UserOutlined } from '@ant-design/icons-vue'
+import { AimOutlined, EnvironmentOutlined, FilterOutlined, GiftOutlined, PushpinFilled, PushpinOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { currencyIcons } from '@/constants/icons'
 import { relativeTime } from '../discordText'
 import { DC_COLORS } from './trains'
-import { EXPANSIONS, isUp, sRankRewards, upMs, type SRank } from './sRanks'
+import { EXPANSIONS, isUp, sRankRewards, UP_MS, type ExpansionKey, type SRank } from './sRanks'
 
-const props = defineProps<{ sRanks: SRank[]; now: number }>()
+// onlyExpansion: the one expansion the filter shows, when it's narrowed to exactly one.
+// pin and filter toggle that expansion as the pinned one and as the filter's only one.
+const props = defineProps<{ sRanks: SRank[]; now: number; pinned: ExpansionKey | null; onlyExpansion: ExpansionKey | null }>()
+const emit = defineEmits<{ pin: [ExpansionKey]; filter: [ExpansionKey] }>()
 
-// Newest first
-const up = computed(() => props.sRanks.filter((s) => isUp(s, props.now)))
+const isPinned = (sRank: SRank) => props.pinned !== null && sRank.expansion === props.pinned
+
+// The pinned expansion's first, then the rest; newest first within each (the sort is stable)
+const up = computed(() =>
+  props.sRanks.filter((s) => isUp(s, props.now)).sort((a, b) => Number(isPinned(b)) - Number(isPinned(a))),
+)
 
 // Shown while none is up: the last few of the day (the store keeps 24 hours)
 const RECENT_SHOWN = 6
@@ -136,11 +162,11 @@ const S_RANK_COLOR = '#f5222d'
 
 // How much of the time it counts as up has passed (an estimate: the feed doesn't say when it dies).
 // The bar shows what's left, kept above 0 and under 100, where Ant would switch it to its "success" look.
-const shownPercent = (sRank: SRank) => Math.min(99.5, Math.max(0.5, ((tick.value - sRank.spottedAt) / upMs(sRank)) * 100))
+const shownPercent = (sRank: SRank) => Math.min(99.5, Math.max(0.5, ((tick.value - sRank.spottedAt) / UP_MS) * 100))
 
 // m:ss until the card hides
 function hidesIn(sRank: SRank) {
-  const seconds = Math.max(0, Math.floor((sRank.spottedAt + upMs(sRank) - tick.value) / 1000))
+  const seconds = Math.max(0, Math.floor((sRank.spottedAt + UP_MS - tick.value) / 1000))
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 </script>

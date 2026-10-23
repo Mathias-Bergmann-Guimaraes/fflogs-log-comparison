@@ -22,15 +22,9 @@
       <div class="flex flex-col gap-3">
         <div v-for="group in groups" :key="group.key">
           <a-typography-text type="secondary" class="text-xs">{{ group.label }}</a-typography-text>
-          <a-checkbox-group
-            :value="modelValue[group.key] ?? []"
-            class="mt-1 flex! flex-col gap-1"
-            @update:value="(value: string[]) => emit('update:modelValue', { ...modelValue, [group.key]: value })"
-          >
-            <a-checkbox v-for="option in group.options" :key="option.value" :value="option.value" class="ms-0!">{{ option.label }}</a-checkbox>
-          </a-checkbox-group>
+          <FilterChips :options="group.options" :picked="modelValue[group.key] ?? []" @toggle="(value) => toggle(group.key, value)" />
         </div>
-        <a-typography-text type="secondary" class="text-xs">Nothing ticked in a group shows all of it.</a-typography-text>
+        <a-typography-text type="secondary" class="text-xs">Nothing picked in a group shows all of it.</a-typography-text>
       </div>
     </template>
   </a-popover>
@@ -39,9 +33,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { FilterFilled, FilterOutlined } from '@ant-design/icons-vue'
+import FilterChips, { type FilterOption } from './FilterChips.vue'
 
-export type FilterGroup = { key: string; label: string; options: { value: string; label: string }[] }
-// The ticked values per group; an empty or missing group lets everything through
+export type FilterGroup = { key: string; label: string; options: FilterOption[] }
+// The picked values per group; an empty or missing group lets everything through
 export type FilterValue = Record<string, string[]>
 
 const props = defineProps<{ groups: FilterGroup[]; modelValue: FilterValue }>()
@@ -50,4 +45,9 @@ const emit = defineEmits<{ 'update:modelValue': [FilterValue] }>()
 const open = ref(false)
 const active = computed(() => Object.values(props.modelValue).some((values) => values.length))
 const clear = () => emit('update:modelValue', {})
+
+function toggle(group: string, value: string) {
+  const picked = props.modelValue[group] ?? []
+  emit('update:modelValue', { ...props.modelValue, [group]: picked.includes(value) ? picked.filter((v) => v !== value) : [...picked, value] })
+}
 </script>
