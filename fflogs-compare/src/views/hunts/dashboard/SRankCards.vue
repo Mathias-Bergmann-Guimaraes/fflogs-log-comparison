@@ -1,7 +1,8 @@
 <template>
-  <!-- Nothing up: say so, and fill the space with the last ones reported (the section's height is set by the A side) -->
-  <div v-if="!up.length" class="flex flex-1 flex-col">
-    <a-empty :image="Empty.PRESENTED_IMAGE_SIMPLE" :class="['my-6!', { 'my-auto!': !recent.length }]">
+  <!-- Nothing up: say so, and fill the space with the last ones reported. One card tall on its own; the list scrolls in
+       whatever room the A side leaves, so it never makes the section taller. -->
+  <div v-if="!up.length" class="flex min-h-64 flex-1 flex-col">
+    <a-empty :image="Empty.PRESENTED_IMAGE_SIMPLE" :class="['my-4!', { 'my-auto!': !recent.length }]">
       <template #description>
         <a-typography-text type="secondary">No S rank up right now. New ones show up here as soon as they're reported.</a-typography-text>
       </template>
@@ -9,32 +10,43 @@
 
     <template v-if="recent.length">
       <a-typography-text type="secondary" class="text-xs tracking-wider uppercase">Recently reported</a-typography-text>
-      <a-list size="small" :data-source="recent" :split="true" class="mt-1">
-        <template #renderItem="{ item }: { item: SRank }">
-          <a-list-item class="px-0!">
-            <div class="flex min-w-0 flex-1 items-center gap-3">
-              <span class="inline-block size-2 shrink-0 rounded-full" :style="{ background: DC_COLORS[item.dc] }" />
-              <div class="min-w-0 flex-1">
-                <div class="flex min-w-0 items-center gap-2">
-                  <span class="shrink-0 font-medium">{{ item.world }}</span>
-                  <a-typography-text type="secondary" class="truncate">{{ item.mark }}</a-typography-text>
-                  <a-tag v-if="item.instance" class="me-0! shrink-0 text-xs">Instance {{ item.instance }}</a-tag>
-                  <a-tag v-if="item.ss" :color="S_RANK_COLOR" class="me-0! shrink-0 text-xs">SS</a-tag>
+      <div class="relative mt-1 min-h-0 flex-1">
+        <div class="absolute inset-0 overflow-x-hidden overflow-y-auto pe-2 [scrollbar-color:#434343_transparent] [scrollbar-width:thin]">
+          <a-list size="small" :data-source="recent" :split="true">
+            <template #renderItem="{ item }: { item: SRank }">
+              <a-list-item class="px-0!">
+                <div class="flex min-w-0 flex-1 items-center gap-3">
+                  <span class="inline-block size-2 shrink-0 rounded-full" :style="{ background: DC_COLORS[item.dc] }" />
+                  <div class="min-w-0 flex-1">
+                    <div class="flex min-w-0 items-center gap-2">
+                      <span class="shrink-0 font-medium">{{ item.world }}</span>
+                      <a-typography-text type="secondary" class="truncate">{{ item.mark }}</a-typography-text>
+                      <a-tag v-if="item.instance" class="me-0! shrink-0 text-xs">Instance {{ item.instance }}</a-tag>
+                      <a-tag v-if="item.ss" :color="S_RANK_COLOR" class="me-0! shrink-0 text-xs">SS</a-tag>
+                    </div>
+                    <a-typography-text v-if="item.zone" type="secondary" class="text-xs">{{ item.zone }}</a-typography-text>
+                  </div>
+                  <a-tag v-if="item.expansion" :color="EXPANSIONS[item.expansion].color" class="me-0! shrink-0">{{
+                    EXPANSIONS[item.expansion].label
+                  }}</a-tag>
+                  <a-typography-text type="secondary" class="w-24 shrink-0 text-right text-xs">{{
+                    relativeTime(item.spottedAt, tick)
+                  }}</a-typography-text>
                 </div>
-                <a-typography-text v-if="item.zone" type="secondary" class="text-xs">{{ item.zone }}</a-typography-text>
-              </div>
-              <a-tag v-if="item.expansion" :color="EXPANSIONS[item.expansion].color" class="me-0! shrink-0">{{ EXPANSIONS[item.expansion].label }}</a-tag>
-              <a-typography-text type="secondary" class="w-24 shrink-0 text-right text-xs">{{ relativeTime(item.spottedAt, tick) }}</a-typography-text>
-            </div>
-          </a-list-item>
-        </template>
-      </a-list>
+              </a-list-item>
+            </template>
+          </a-list>
+        </div>
+      </div>
     </template>
   </div>
   <!-- Cards as tall as the A rank trains' (min-h-64), and two of them at most (33rem) before the rest scroll, so both
        sides show two rows. Room on the right for the ribbons, which stick out of the cards, and all round for the
        pinned cards' glow (the negative margin keeps the cards where they were). -->
-  <div v-else class="-m-1.5 flex max-h-135 flex-col gap-4 overflow-x-hidden overflow-y-auto p-1.5 pe-3.5 [scrollbar-color:#434343_transparent] [scrollbar-width:thin]">
+  <div
+    v-else
+    class="-m-1.5 flex max-h-135 flex-col gap-4 overflow-x-hidden overflow-y-auto p-1.5 pe-3.5 [scrollbar-color:#434343_transparent] [scrollbar-width:thin]"
+  >
     <a-badge-ribbon v-for="sRank in up" :key="sRank.id" :text="sRank.ss ? 'SS rank' : 'S rank'" :color="S_RANK_COLOR">
       <!-- Pinned ones get a gold border, like the favorite jobs' cards on the BiS tracker -->
       <a-card size="small" :class="['min-h-64', isPinned(sRank) && 'border-amber-400! shadow-[0_0_12px_rgba(251,191,36,0.25)]']">
@@ -48,7 +60,8 @@
             <!-- Where, which mark and which expansion -->
             <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 pe-16">
               <span class="truncate text-xl leading-tight font-semibold">
-                <a-tooltip v-if="isPinned(sRank)" title="Pinned expansion"><PushpinFilled class="me-1.5 text-base text-amber-400" /></a-tooltip>{{ sRank.world }}
+                <a-tooltip v-if="isPinned(sRank)" title="Pinned expansion"><PushpinFilled class="me-1.5 text-base text-amber-400" /></a-tooltip
+                >{{ sRank.world }}
               </span>
               <span class="flex items-center gap-1.5 text-sm">
                 <span class="inline-block size-2 rounded-full" :style="{ background: DC_COLORS[sRank.dc] }" />
@@ -116,7 +129,14 @@
             <!-- When the card goes away, kept quiet: it's this page's guess, not the S rank's state -->
             <a-tooltip title="The feed doesn't say when an S rank dies, so the card hides a while after it was reported">
               <div class="mt-auto flex items-center gap-2 pt-2 text-xs text-gray-500">
-                <a-progress :percent="100 - shownPercent(sRank)" :show-info="false" size="small" stroke-color="rgba(255, 255, 255, 0.25)" trail-color="rgba(255, 255, 255, 0.06)" class="m-0! flex-1" />
+                <a-progress
+                  :percent="100 - shownPercent(sRank)"
+                  :show-info="false"
+                  size="small"
+                  stroke-color="rgba(255, 255, 255, 0.25)"
+                  trail-color="rgba(255, 255, 255, 0.06)"
+                  class="m-0! flex-1"
+                />
                 <span class="tabular-nums">hides in {{ hidesIn(sRank) }}</span>
               </div>
             </a-tooltip>
@@ -144,9 +164,7 @@ const emit = defineEmits<{ pin: [ExpansionKey]; filter: [ExpansionKey] }>()
 const isPinned = (sRank: SRank) => props.pinned !== null && sRank.expansion === props.pinned
 
 // The pinned expansion's first, then the rest; newest first within each (the sort is stable)
-const up = computed(() =>
-  props.sRanks.filter((s) => isUp(s, props.now)).sort((a, b) => Number(isPinned(b)) - Number(isPinned(a))),
-)
+const up = computed(() => props.sRanks.filter((s) => isUp(s, props.now)).sort((a, b) => Number(isPinned(b)) - Number(isPinned(a))))
 
 // Shown while none is up: the last few of the day (the store keeps 24 hours)
 const RECENT_SHOWN = 6

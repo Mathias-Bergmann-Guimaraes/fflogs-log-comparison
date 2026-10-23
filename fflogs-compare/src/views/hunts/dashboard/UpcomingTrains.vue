@@ -1,36 +1,45 @@
 <template>
-  <!-- Nothing on: say so, and fill the space with the last trains run (like the S ranks' side) -->
-  <div v-if="!active.length" class="flex flex-1 flex-col">
-    <a-empty :image="Empty.PRESENTED_IMAGE_SIMPLE" :class="['my-6!', { 'my-auto!': !recent.length }]">
+  <!-- Nothing on: say so, and fill the space with the last trains run (like the S ranks' side). One card tall on its
+       own; the list scrolls in whatever room the S side leaves, so it never makes the section taller. -->
+  <div v-if="!active.length" class="flex min-h-64 flex-1 flex-col">
+    <a-empty :image="Empty.PRESENTED_IMAGE_SIMPLE" :class="['my-4!', { 'my-auto!': !recent.length }]">
       <template #description>
-        <a-typography-text type="secondary">No train running or announced right now. New ones show up here as soon as they're posted.</a-typography-text>
+        <a-typography-text type="secondary"
+          >No train running or announced right now. New ones show up here as soon as they're posted.</a-typography-text
+        >
       </template>
     </a-empty>
 
     <template v-if="recent.length">
       <a-typography-text type="secondary" class="text-xs tracking-wider uppercase">Recently run</a-typography-text>
-      <a-list size="small" :data-source="recent" :split="true" class="mt-1">
-        <template #renderItem="{ item }: { item: Train }">
-          <a-list-item class="px-0!">
-            <div class="flex min-w-0 flex-1 items-center gap-3">
-              <span class="inline-block size-2 shrink-0 rounded-full" :style="{ background: DC_COLORS[item.dc] }" />
-              <div class="min-w-0 flex-1">
-                <div class="flex min-w-0 items-center gap-2">
-                  <span class="shrink-0 font-medium">{{ item.world }}</span>
-                  <a-typography-text v-if="item.conductor" type="secondary" class="truncate">{{ item.conductor }}</a-typography-text>
+      <div class="relative mt-1 min-h-0 flex-1">
+        <div class="absolute inset-0 overflow-x-hidden overflow-y-auto pe-2 [scrollbar-color:#434343_transparent] [scrollbar-width:thin]">
+          <a-list size="small" :data-source="recent" :split="true">
+            <template #renderItem="{ item }: { item: Train }">
+              <a-list-item class="px-0!">
+                <div class="flex min-w-0 flex-1 items-center gap-3">
+                  <span class="inline-block size-2 shrink-0 rounded-full" :style="{ background: DC_COLORS[item.dc] }" />
+                  <div class="min-w-0 flex-1">
+                    <div class="flex min-w-0 items-center gap-2">
+                      <span class="shrink-0 font-medium">{{ item.world }}</span>
+                      <a-typography-text v-if="item.conductor" type="secondary" class="truncate">{{ item.conductor }}</a-typography-text>
+                    </div>
+                    <a-typography-text v-if="item.start" type="secondary" class="block truncate text-xs">
+                      {{ [item.start.aetheryte ?? item.start.zone, item.start.aetheryte && item.start.zone].filter(Boolean).join(' · ') }}
+                    </a-typography-text>
+                  </div>
+                  <div class="flex shrink-0 gap-1">
+                    <a-tag v-for="type in typesOf(item)" :key="type.key" :color="type.color" class="me-0!">{{ type.label }}</a-tag>
+                  </div>
+                  <a-typography-text type="secondary" class="w-24 shrink-0 text-right text-xs">{{
+                    relativeTime(item.startsAt, tick)
+                  }}</a-typography-text>
                 </div>
-                <a-typography-text v-if="item.start" type="secondary" class="block truncate text-xs">
-                  {{ [item.start.aetheryte ?? item.start.zone, item.start.aetheryte && item.start.zone].filter(Boolean).join(' · ') }}
-                </a-typography-text>
-              </div>
-              <div class="flex shrink-0 gap-1">
-                <a-tag v-for="type in typesOf(item)" :key="type.key" :color="type.color" class="me-0!">{{ type.label }}</a-tag>
-              </div>
-              <a-typography-text type="secondary" class="w-24 shrink-0 text-right text-xs">{{ relativeTime(item.startsAt, tick) }}</a-typography-text>
-            </div>
-          </a-list-item>
-        </template>
-      </a-list>
+              </a-list-item>
+            </template>
+          </a-list>
+        </div>
+      </div>
     </template>
   </div>
 
@@ -80,7 +89,12 @@
                 <div v-if="train.start" class="min-w-0">
                   <span class="font-medium">{{ train.start.aetheryte ?? train.start.zone }}</span>
                   <a-typography-text v-if="(train.start.aetheryte && train.start.zone) || train.start.instance" type="secondary" class="text-xs">
-                    · {{ [train.start.aetheryte && train.start.zone, train.start.instance && `Instance ${train.start.instance}`].filter(Boolean).join(' · ') }}
+                    ·
+                    {{
+                      [train.start.aetheryte && train.start.zone, train.start.instance && `Instance ${train.start.instance}`]
+                        .filter(Boolean)
+                        .join(' · ')
+                    }}
                   </a-typography-text>
                 </div>
                 <a-typography-text v-else type="secondary">Starting point not in the post</a-typography-text>
@@ -90,7 +104,11 @@
                 <component :is="speedIcon(train.speed)" class="mt-1 text-gray-400" />
                 <div>
                   <span class="font-medium">{{ train.speed.kind ? SPEED_LABELS[train.speed.kind] : train.speed.text }}</span>
-                  <a-typography-text v-if="train.speed.kind && train.speed.text.toLowerCase() !== SPEED_LABELS[train.speed.kind].toLowerCase()" type="secondary" class="ms-2 text-xs">
+                  <a-typography-text
+                    v-if="train.speed.kind && train.speed.text.toLowerCase() !== SPEED_LABELS[train.speed.kind].toLowerCase()"
+                    type="secondary"
+                    class="ms-2 text-xs"
+                  >
                     "{{ train.speed.text }}"
                   </a-typography-text>
                 </div>
