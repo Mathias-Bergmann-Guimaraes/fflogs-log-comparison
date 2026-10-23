@@ -2,7 +2,20 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
 import HomeViewLayout from '@/views/HomeViewLayout.vue'
 import { markRaw, type Component } from 'vue'
-import { AimOutlined, AppstoreOutlined, BellOutlined, DashboardOutlined, CrownOutlined, StarOutlined, TrophyOutlined } from '@ant-design/icons-vue'
+import {
+  AimOutlined,
+  AppstoreOutlined,
+  BarChartOutlined,
+  BellOutlined,
+  CrownOutlined,
+  DashboardOutlined,
+  FireOutlined,
+  HomeOutlined,
+  SettingOutlined,
+  SkinOutlined,
+  StarOutlined,
+  TrophyOutlined,
+} from '@ant-design/icons-vue'
 import { useAuthStore } from '@/stores/authStore'
 
 declare module 'vue-router' {
@@ -51,19 +64,19 @@ const router = createRouter({
       path: '/',
       component: HomeViewLayout,
       children: [
-        { path: '', name: 'home', component: HomeView, meta: { menuLabel: 'Home' } },
+        { path: '', name: 'home', component: HomeView, meta: { menuLabel: 'Home', menuIcon: markRaw(HomeOutlined) } },
         {
           path: 'compare',
           name: 'compare',
           component: () => import('@/views/fflogsComparison/CompareView.vue'),
-          meta: { menuLabel: 'Logs Comparison' },
+          meta: { menuLabel: 'Logs Comparison', menuIcon: markRaw(BarChartOutlined) },
         },
         {
           // A submenu in the side menu: its children are the pages
           path: 'bisTracker',
           name: 'bisTracker',
           component: () => import('@/views/bis-tracker/BisTrackerView.vue'),
-          meta: { menuLabel: 'BiS Tracker', requiresAuth: true },
+          meta: { menuLabel: 'BiS Tracker', menuIcon: markRaw(SkinOutlined), requiresAuth: true },
           redirect: () => ({ name: lastBisPage() }),
           children: [
             {
@@ -96,7 +109,7 @@ const router = createRouter({
           path: 'hunts',
           name: 'hunts',
           component: () => import('@/views/hunts/HuntTrackerView.vue'),
-          meta: { menuLabel: 'Hunt Tracker', requiresAuth: true, feature: 'hunts' },
+          meta: { menuLabel: 'Hunt Tracker', menuIcon: markRaw(FireOutlined), requiresAuth: true, feature: 'hunts' },
           redirect: () => ({ name: lastHuntPage() }),
           children: [
             {
@@ -131,7 +144,7 @@ const router = createRouter({
           path: 'settings',
           name: 'settings',
           component: () => import('@/views/SettingsView.vue'),
-          meta: { menuLabel: 'Settings', requiresAuth: true },
+          meta: { menuLabel: 'Settings', menuIcon: markRaw(SettingOutlined), requiresAuth: true },
         },
         {
           path: 'login',
