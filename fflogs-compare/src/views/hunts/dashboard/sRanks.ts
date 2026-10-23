@@ -44,6 +44,8 @@ export type SRank = {
   world: string
   dc: DataCenterName
   mark: string
+  // null when the zone isn't instanced
+  instance: number | null
   ss: boolean
   expansion: ExpansionKey | null
   zone: string | null
@@ -81,7 +83,10 @@ export function parseSRank(message: HuntSRankMessage): SRank | null {
 
   const markLine = lines.find((l) => /<:s{1,2}mob:/.test(l))
   // Without an embed the mark is still in the content, after the world: "[ Lich ]  The Garlok［Garlok］"
-  const mark = english(markLine ?? message.content.split('\n')[0]!.replace(/^\s*\[[^\]]*\]/, ''))
+  const markText = (markLine ?? message.content.split('\n')[0]!.replace(/^\s*\[[^\]]*\]/, '')).split('［')[0]!
+  // In an instanced zone the instance follows the name in backticks: "Atticus the Primogenitor `2`"
+  const instance = /`\s*(\d)\s*`/.exec(markText)?.[1]
+  const mark = english(markText.replace(/`\s*\d\s*`/, ''))
   if (!mark) return null
 
   const zoneLine = lines.find((l) => /<:\dx:\d+>/.test(l))
@@ -99,7 +104,8 @@ export function parseSRank(message: HuntSRankMessage): SRank | null {
     id: message.id,
     ...place,
     mark,
-    ss: !!markLine?.includes('<:ssmob:'),
+    instance: instance ? Number(instance) : null,
+    ss:!!markLine?.includes('<:ssmob:'),
     expansion: digit in EXPANSIONS ? (digit as ExpansionKey) : null,
     zone: zoneLine ? english(zoneLine) : null,
     spots,
@@ -109,14 +115,17 @@ export function parseSRank(message: HuntSRankMessage): SRank | null {
   }
 }
 
-// Reposts of the same mark on the same world (a corrected spot) are folded into the newest one. Newest first in and out.
+// The mark with its instance, when there is one: "Atticus the Primogenitor (instance 2)"
+export const markName = (sRank: SRank) => (sRank.instance ? `${sRank.mark} (instance ${sRank.instance})` : sRank.mark)
+
+// Reposts of the same mark on the same world and instance (a corrected spot) are folded into the newest one. Newest first in and out.
 // Longer than it shows as up: a repost a while later is still the same spawn (an S rank respawns after hours).
 const SAME_SPAWN_MS = 20 * 60_000
 
 export function dedupeSRanks(sRanks: SRank[]): SRank[] {
   const kept: SRank[] = []
   for (const s of sRanks) {
-    if (!kept.some((k) => k.world === s.world && k.mark === s.mark && Math.abs(k.spottedAt - s.spottedAt) < SAME_SPAWN_MS)) kept.push(s)
+    if (!kept.some((k) => k.world === s.world && k.mark === s.mark && k.instance === s.instance && Math.abs(k.spottedAt - s.spottedAt) < SAME_SPAWN_MS)) kept.push(s)
   }
   return kept
 }

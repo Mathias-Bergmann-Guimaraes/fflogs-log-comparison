@@ -18,6 +18,7 @@
                 <div class="flex min-w-0 items-center gap-2">
                   <span class="shrink-0 font-medium">{{ item.world }}</span>
                   <a-typography-text type="secondary" class="truncate">{{ item.mark }}</a-typography-text>
+                  <a-tag v-if="item.instance" class="me-0! shrink-0 text-xs">Instance {{ item.instance }}</a-tag>
                   <a-tag v-if="item.ss" :color="S_RANK_COLOR" class="me-0! shrink-0 text-xs">SS</a-tag>
                 </div>
                 <a-typography-text v-if="item.zone" type="secondary" class="text-xs">{{ item.zone }}</a-typography-text>
@@ -53,6 +54,7 @@
             </div>
             <div class="mt-1 flex flex-wrap items-center gap-2">
               <span class="inline-flex items-center gap-1.5 font-medium"><AimOutlined class="text-gray-400" />{{ sRank.mark }}</span>
+              <a-tag v-if="sRank.instance" class="me-0! font-semibold">Instance {{ sRank.instance }}</a-tag>
               <a-tag v-if="sRank.expansion" :color="EXPANSIONS[sRank.expansion].color" class="me-0! font-semibold">
                 {{ EXPANSIONS[sRank.expansion].label }} {{ EXPANSIONS[sRank.expansion].name }}
               </a-tag>

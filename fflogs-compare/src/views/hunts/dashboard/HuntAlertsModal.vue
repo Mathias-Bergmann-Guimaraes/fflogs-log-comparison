@@ -1,7 +1,8 @@
 <template>
   <a-modal v-model:open="open" title="Hunt alerts" ok-text="Save" :confirm-loading="saving" @ok="onSave">
     <a-typography-paragraph type="secondary">
-      The bell in the header gets a dot while a hunt matching any of these is running or announced. With no rules, it stays quiet.
+      The bell in the header gets a dot while a hunt matching any of these is running or announced, and an S rank matching
+      them pops up as soon as it's reported. With no rules, it stays quiet.
     </a-typography-paragraph>
 
     <div v-for="(rule, i) in draft" :key="i" class="mb-2 flex items-center gap-2">
@@ -19,12 +20,18 @@
       Add rule
     </a-button>
 
-    <a-alert v-if="draft.some((r) => r.rank === 'S')" type="info" show-icon class="mt-4!" message="S ranks aren't tracked yet, so S rank rules won't do anything until they are." />
+    <a-alert
+      v-if="permission === 'denied' && hasSRule"
+      type="warning"
+      show-icon
+      class="mt-4!"
+      message="This browser blocks notifications from this site, so S ranks only pop up while the tab is open. Allow them in the site settings to get them in the background too."
+    />
   </a-modal>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Empty } from 'ant-design-vue'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import { HUNT_RANKS, useHuntAlertsStore, type HuntAlertRule } from '@/stores/huntAlertsStore'
@@ -42,9 +49,20 @@ const saving = ref(false)
 const draft = ref<HuntAlertRule[]>([])
 watch(open, (isOpen) => {
   if (isOpen) draft.value = alerts.rules.map((rule) => ({ ...rule }))
+  permission.value = readPermission()
 })
 
+// S rank rules also send a desktop notification while the tab is in the background (see HuntAlertsBell),
+// which the browser only allows once asked from a click: asked on saving such a rule
+const hasSRule = computed(() => draft.value.some((r) => r.rank !== 'A'))
+const readPermission = () => (typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
+const permission = ref(readPermission())
+
 async function onSave() {
+  if (hasSRule.value && permission.value === 'default') {
+    // Not awaited: the save shouldn't wait on the browser's prompt
+    Notification.requestPermission().then((p) => (permission.value = p))
+  }
   // The same rule twice means nothing more
   const unique = draft.value.filter((rule, i) => draft.value.findIndex((r) => r.rank === rule.rank && r.dc === rule.dc) === i)
   saving.value = true

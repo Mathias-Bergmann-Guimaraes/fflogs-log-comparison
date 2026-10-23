@@ -63,17 +63,20 @@
   </a-popover>
 
   <HuntAlertsModal v-model:open="settingsOpen" />
+  <ContextHolder />
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, h, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import { Button, notification } from 'ant-design-vue'
 import { BellOutlined, LeftOutlined, RightOutlined, SettingOutlined } from '@ant-design/icons-vue'
 import { useHuntTrainsStore } from '@/stores/huntTrainsStore'
 import type { HuntRank } from '@/types/hunts'
 import { relativeTime } from './discordText'
 import type { DataCenterName } from './dashboard/trains'
+import { markName, type SRank } from './dashboard/sRanks'
 import HuntAlertsModal from './dashboard/HuntAlertsModal.vue'
 
 // In the header, so the user sees a hunt they asked for (see the alert rules) from any page.
@@ -92,7 +95,7 @@ const alerts = computed<HuntAlert[]>(() => [
     world: s.world,
     dc: s.dc,
     at: s.spottedAt,
-    text: `${s.ss ? 'SS' : 'S'} rank ${s.mark} · spotted ${relativeTime(s.spottedAt, now.value)}`,
+    text: `${s.ss ? 'SS' : 'S'} rank ${markName(s)} · spotted ${relativeTime(s.spottedAt, now.value)}`,
   })),
   ...alertTrains.value.map((train) => {
     const running = train.startsAt <= now.value
@@ -165,5 +168,53 @@ function openSettings() {
 function openDashboard() {
   popoverOpen.value = false
   router.push({ name: 'huntsDashboard' })
+}
+
+// An S rank is only up a few minutes, so one matching the alert rules also pops up, once per spawn: a notice on the
+// page, and a desktop notification while the tab is in the background (when the browser allows it, see HuntAlertsModal).
+// useNotification (not the static API) so it picks up the dark theme from a-config-provider
+const [notify, ContextHolder] = notification.useNotification()
+const notified = new Set<string>()
+
+watch(alertSRanks, (sRanks) => {
+  for (const s of sRanks) {
+    if (notified.has(s.id)) continue
+    notified.add(s.id)
+    notifySRank(s)
+  }
+})
+
+function notifySRank(s: SRank) {
+  const title = `${s.ss ? 'SS' : 'S'} rank on ${s.world} (${s.dc})`
+  const body = [markName(s), s.zone].filter(Boolean).join(' · ')
+
+  notify.warning({
+    key: s.id,
+    message: title,
+    description: body,
+    placement: 'topRight',
+    duration: 20,
+    btn: () =>
+      h(
+        Button,
+        {
+          size: 'small',
+          type: 'primary',
+          onClick: () => {
+            notify.destroy(s.id)
+            openDashboard()
+          },
+        },
+        () => 'Train dashboard',
+      ),
+  })
+
+  if (!document.hidden || typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+  const desktop = new Notification(title, { body, tag: s.id, icon: s.image ?? undefined })
+  desktop.onclick = () => {
+    window.focus()
+    openDashboard()
+    desktop.close()
+  }
 }
 </script>
