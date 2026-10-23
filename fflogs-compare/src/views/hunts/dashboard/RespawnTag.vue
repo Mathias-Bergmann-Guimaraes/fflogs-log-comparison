@@ -6,9 +6,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { formatDuration, type Respawn } from './trains'
+import { formatDuration, respawnWindow, type Respawn, type TrainTypeKey } from './trains'
 
-const props = defineProps<{ respawn: Respawn; now: number }>()
+const props = defineProps<{ respawn: Respawn; type: TrainTypeKey; now: number }>()
+
+// The respawn window, as "3h" and "6h"
+const hours = computed(() => {
+  const { min, max } = respawnWindow(props.type)
+  return { min: formatDuration(min), max: formatDuration(max) }
+})
 
 const time = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { timeStyle: 'short' })
 
@@ -36,9 +42,9 @@ const tooltip = computed(() => {
     case 'unseen':
       return 'No train seen since tracking began, so everything should be up'
     case 'open':
-      return 'Over 6 hours since the last train ended: every A rank is up, a train can start anytime'
+      return `Over ${hours.value.max} since the last train ended: every A rank is up, a train can start anytime`
     case 'window':
-      return `Some A ranks are back (respawn is 3 to 6 hours). All up by ${time(r.fullAt)}`
+      return `Some A ranks are back (respawn is ${hours.value.min} to ${hours.value.max}). All up by ${time(r.fullAt)}`
     case 'cooldown':
       return `Nothing has respawned yet. Earliest respawn ${time(r.opensAt)}, all up by ${time(r.fullAt)}`
     case 'running':

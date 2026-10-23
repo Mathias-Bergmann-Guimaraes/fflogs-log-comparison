@@ -5,7 +5,7 @@
       <a-typography-text type="secondary" class="ms-2 text-xs font-normal">last train per world</a-typography-text>
     </template>
     <template #extra>
-      <a-typography-text type="secondary" class="text-xs">amber = respawning (3 to 6 h) · green = all up · click a header to sort</a-typography-text>
+      <a-typography-text type="secondary" class="text-xs">amber = respawning · green = all up · click a header to sort</a-typography-text>
     </template>
 
     <a-table :columns="columns" :data-source="rows" :pagination="false" size="small" row-key="world" :show-sorter-tooltip="false">
@@ -69,7 +69,7 @@ const rows = computed<Row[]>(() =>
     cells: Object.fromEntries(
       TRAIN_TYPES.map((t) => {
         const last = props.last.get(lastKey(world, t.key)) ?? null
-        return [t.key, { last, elapsed: last ? props.now - last.startsAt : null, respawn: respawnState(last, props.now) }]
+        return [t.key, { last, elapsed: last ? props.now - last.startsAt : null, respawn: respawnState(last, t.key, props.now) }]
       }),
     ) as Record<TrainTypeKey, Cell>,
   })),
@@ -88,7 +88,7 @@ const oldest = computed(() =>
 // Everything's up: shown as the same green tag RespawnTag uses for "open"
 const isOpen = (cell: Cell) => !!cell.last && !isActive(cell.last, props.now) && cell.respawn.phase === 'open'
 
-// While respawning, an amber pill behind the time that grows through the 3 to 6 hour window
+// While respawning, an amber pill behind the time that grows through the respawn window
 function tint(cell: Cell) {
   if (!cell.last || isActive(cell.last, props.now)) return undefined
   const r = cell.respawn

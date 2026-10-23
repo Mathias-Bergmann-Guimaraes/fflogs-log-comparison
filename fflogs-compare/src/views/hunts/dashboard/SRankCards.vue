@@ -154,7 +154,7 @@ import { AimOutlined, EnvironmentOutlined, FilterOutlined, GiftOutlined, Pushpin
 import { currencyIcons } from '@/constants/icons'
 import { relativeTime } from '../discordText'
 import { DC_COLORS } from './trains'
-import { EXPANSIONS, isUp, sRankRewards, UP_MS, type ExpansionKey, type SRank } from './sRanks'
+import { EXPANSIONS, isUp, sRankRewards, upMs, type ExpansionKey, type SRank } from './sRanks'
 
 // onlyExpansion: the one expansion the filter shows, when it's narrowed to exactly one.
 // pin and filter toggle that expansion as the pinned one and as the filter's only one.
@@ -180,11 +180,11 @@ const S_RANK_COLOR = '#f5222d'
 
 // How much of the time it counts as up has passed (an estimate: the feed doesn't say when it dies).
 // The bar shows what's left, kept above 0 and under 100, where Ant would switch it to its "success" look.
-const shownPercent = (sRank: SRank) => Math.min(99.5, Math.max(0.5, ((tick.value - sRank.spottedAt) / UP_MS) * 100))
+const shownPercent = (sRank: SRank) => Math.min(99.5, Math.max(0.5, ((tick.value - sRank.spottedAt) / upMs(sRank)) * 100))
 
 // m:ss until the card hides
 function hidesIn(sRank: SRank) {
-  const seconds = Math.max(0, Math.floor((sRank.spottedAt + UP_MS - tick.value) / 1000))
+  const seconds = Math.max(0, Math.floor((sRank.spottedAt + upMs(sRank) - tick.value) / 1000))
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 </script>

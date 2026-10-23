@@ -7,8 +7,8 @@ import { upgradeStatusFor } from '@/constants/equipmentStatus'
 import { useBisStore } from '@/stores/bisStore'
 import { useStockStore } from '@/stores/stockStore'
 import { useFavoritesStore } from '@/stores/favoritesStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 
-export const WEEKLY_TOME_CAP = 450
 const BOOKS_PER_FLOOR_PER_WEEK = 1
 const MAX_WEEKS = 520 // safety stop for the simulation
 
@@ -82,6 +82,8 @@ const lastWeek = (purchases: Purchase[]) => purchases.reduce((max, p) => Math.ma
 export function useBisPlan() {
   const bis = useBisStore()
   const stockStore = useStockStore()
+  // The weekly tome cap (450, or 900 when doubled) is the user's setting
+  const settings = useSettingsStore()
   const favorites = useFavoritesStore()
 
   // Favorites first, then role order: everything below is queued in this order
@@ -97,7 +99,7 @@ export function useBisPlan() {
     const weeks = simulate(
       pieces.map((p) => p.tomes),
       stock.tomes,
-      (week) => (week === 1 ? Math.max(0, WEEKLY_TOME_CAP - stock.tomesEarnedThisWeek) : WEEKLY_TOME_CAP),
+      (week) => (week === 1 ? Math.max(0, settings.weeklyTomeCap - stock.tomesEarnedThisWeek) : settings.weeklyTomeCap),
     )
     return pieces.map((p, i) => ({
       id: `tome:${p.job}:${p.slot}`,
@@ -235,7 +237,7 @@ export function useBisPlan() {
     let undoStock: () => void
     if (purchase.source === 'tome') {
       const paid = Math.min(purchase.cost, stock.tomes)
-      const earned = Math.min(WEEKLY_TOME_CAP - stock.tomesEarnedThisWeek, purchase.cost - paid)
+      const earned = Math.max(0, Math.min(settings.weeklyTomeCap - stock.tomesEarnedThisWeek, purchase.cost - paid))
       stock.tomes -= paid
       stock.tomesEarnedThisWeek += earned
       undoStock = () => {

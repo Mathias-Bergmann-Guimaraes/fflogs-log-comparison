@@ -36,7 +36,7 @@
           <span class="min-w-0 truncate" :class="i === 0 && dc.clear && 'font-semibold'">{{ s.world }}</span>
           <a-tag v-if="i === 0 && dc.clear" color="orange" class="me-0! shrink-0 text-xs">likely next</a-tag>
           <div class="flex-1" />
-          <RespawnTag :respawn="s.respawn" :now="now" />
+          <RespawnTag :respawn="s.respawn" :type="type.key" :now="now" />
           <a-tooltip :title="`${new Date(s.last!.startsAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}${s.last!.conductor ? ` · ${s.last!.conductor}` : ''}`">
             <a-typography-text type="secondary" class="w-20 shrink-0 cursor-default text-right text-xs whitespace-nowrap tabular-nums">
               {{ formatDuration(s.elapsed!) }} ago
@@ -87,7 +87,7 @@ function toggle(dc: string) {
   expanded.value = next
 }
 
-// Worlds where a train can start (open, or in the 3 to 6 hour respawn window), longest ago first. Worlds never seen
+// Worlds where a train can start (open, or in the respawn window), longest ago first. Worlds never seen
 // are only counted in the summary: they have nothing to rank by and would otherwise crowd out the ones we know about.
 // The top one is only called "likely next" when no unseen world could just as well be next.
 const perDc = computed(() =>

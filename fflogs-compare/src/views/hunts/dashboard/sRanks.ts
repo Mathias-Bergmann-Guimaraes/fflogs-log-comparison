@@ -1,4 +1,5 @@
 import type { HuntSRankMessage } from '@/types/hunts'
+import { useSettingsStore } from '@/stores/settingsStore'
 import { parseWorld, type Currency, type DataCenterName } from './trains'
 
 // S ranks are reported by Faloop's bot: "[ Lich ]  The Garlok［Garlok］" with the details in an embed:
@@ -55,10 +56,14 @@ export type SRank = {
   spottedAt: number
 }
 
-// The feed never says when one dies, so an S rank counts as up this long after it's reported, whatever its expansion
-export const UP_MS = 5 * 60_000
+// SS ranks only exist from Shadowbringers on
+export const hasSSRanks = (expansion: ExpansionKey) => expansion in SS_REWARDS
 
-export const isUp = (sRank: SRank, now: number) => now < sRank.spottedAt + UP_MS
+// The feed never says when one dies, so an S rank counts as up this long after it's reported (the user's setting,
+// per expansion and for SS ranks apart)
+export const upMs = (sRank: Pick<SRank, 'ss' | 'expansion'>) => useSettingsStore().sRankUpMs(sRank)
+
+export const isUp = (sRank: SRank, now: number) => now < sRank.spottedAt + upMs(sRank)
 
 // English only: Faloop adds the French and German names in ［full-width brackets］, and custom emojis are dropped
 const english = (text: string) =>
@@ -113,13 +118,14 @@ export function parseSRank(message: HuntSRankMessage): SRank | null {
 export const markName = (sRank: SRank) => (sRank.instance ? `${sRank.mark} (instance ${sRank.instance})` : sRank.mark)
 
 // Reposts of the same mark on the same world and instance (a corrected spot) are folded into the newest one. Newest first in and out.
-// Longer than it shows as up: a repost a while later is still the same spawn (an S rank respawns after hours).
+// At least as long as it shows as up: a repost a while later is still the same spawn (an S rank respawns after hours).
 const SAME_SPAWN_MS = 20 * 60_000
 
 export function dedupeSRanks(sRanks: SRank[]): SRank[] {
   const kept: SRank[] = []
   for (const s of sRanks) {
-    if (!kept.some((k) => k.world === s.world && k.mark === s.mark && k.instance === s.instance && Math.abs(k.spottedAt - s.spottedAt) < SAME_SPAWN_MS)) kept.push(s)
+    const sameSpawnMs = Math.max(SAME_SPAWN_MS, upMs(s))
+    if (!kept.some((k) => k.world === s.world && k.mark === s.mark && k.instance === s.instance && Math.abs(k.spottedAt - s.spottedAt) < sameSpawnMs)) kept.push(s)
   }
   return kept
 }

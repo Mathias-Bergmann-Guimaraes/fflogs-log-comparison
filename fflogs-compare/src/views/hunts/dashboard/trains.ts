@@ -1,5 +1,6 @@
 import type { HuntPing, HuntTrainMessage } from '@/types/hunts'
 import { expansionOfPlace, parseStartingPoint, type StartingPoint } from '@/constants/aetherytes'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 // EU worlds, in the order the Lodestone lists them
 export const DATA_CENTERS = [
@@ -61,7 +62,7 @@ export type Train = {
   pings: HuntPing[]
   // The <t:…> time in the post ("starting in 10 minutes"), or when it was posted if there is none
   startsAt: number
-  // When it counts as over: see RUNNING_MS
+  // When it counts as over: see isActive
   endsAt: number
   postedAt: number
   conductor: string | null
@@ -197,7 +198,7 @@ export function parseTrain(message: HuntTrainMessage, labels: Record<string, str
     types,
     pings: message.pings,
     startsAt: start.at,
-    endsAt: start.at + (start.given ? RUNNING_MS : RUNNING_UNTIMED_MS),
+    endsAt: start.at + useSettingsStore().trainRunningMs(start.given),
     postedAt: message.createdAt,
     conductor: parseConductor(message.content),
     start: startPoint,
@@ -229,32 +230,31 @@ export function dedupeTrains(trains: Train[]): Train[] {
 
 // --- Analysis ---
 
-// A train counts as running this long after its start. A post without a start time is usually sent a while
-// before the train leaves, so that counts from the post and runs longer.
-export const RUNNING_MS = 15 * 60_000
-export const RUNNING_UNTIMED_MS = 30 * 60_000
+// A train counts as running a while after its start (15 minutes unless the user changed it in Settings). A post
+// without a start time is usually sent a while before the train leaves, so that counts from the post and runs longer.
 
 // Running or still to come
 export const isActive = (train: Train, now: number) => now < train.endsAt
 
-// A ranks respawn 3 to 6 hours after they die. A train kills all 12 of an expansion's A ranks on a world, so the next
-// one there can't start before 3 hours after it ended, gets likelier towards 6 hours, and from then on can start anytime.
-export const RESPAWN_MIN_MS = 3 * 3_600_000
-export const RESPAWN_MAX_MS = 6 * 3_600_000
+// A ranks respawn 3 to 6 hours after they die (the user can change that in Settings, per train type). A train kills
+// all 12 of an expansion's A ranks on a world, so the next one there can't start before the window opens, gets
+// likelier towards its end, and from then on can start anytime.
+export const respawnWindow = (type: TrainTypeKey) => useSettingsStore().respawnWindowMs(type)
 
 export type Respawn =
   | { phase: 'unseen' | 'open' | 'announced' | 'running' }
   | { phase: 'cooldown'; opensAt: number; fullAt: number }
-  // progress: how far through the 3 to 6 hour window, 0 to 1
+  // progress: how far through the respawn window, 0 to 1
   | { phase: 'window'; opensAt: number; fullAt: number; progress: number }
 
-export function respawnState(last: Train | null, now: number): Respawn {
+export function respawnState(last: Train | null, type: TrainTypeKey, now: number): Respawn {
   if (!last) return { phase: 'unseen' }
   if (now < last.startsAt) return { phase: 'announced' }
   const endedAt = last.endsAt
   if (now < endedAt) return { phase: 'running' }
-  const opensAt = endedAt + RESPAWN_MIN_MS
-  const fullAt = endedAt + RESPAWN_MAX_MS
+  const { min, max } = respawnWindow(type)
+  const opensAt = endedAt + min
+  const fullAt = endedAt + max
   if (now < opensAt) return { phase: 'cooldown', opensAt, fullAt }
   if (now < fullAt) return { phase: 'window', opensAt, fullAt, progress: (now - opensAt) / (fullAt - opensAt) }
   return { phase: 'open' }
@@ -314,7 +314,7 @@ export function standings(last: Map<string, Train>, dc: (typeof DATA_CENTERS)[nu
   return dc.worlds
     .map((world) => {
       const train = last.get(lastKey(world, type)) ?? null
-      return { world, dc: dc.name, last: train, elapsed: train ? now - train.startsAt : null, respawn: respawnState(train, now) }
+      return { world, dc: dc.name, last: train, elapsed: train ? now - train.startsAt : null, respawn: respawnState(train, type, now) }
     })
     .sort((a, b) => (b.elapsed ?? Infinity) - (a.elapsed ?? Infinity))
 }

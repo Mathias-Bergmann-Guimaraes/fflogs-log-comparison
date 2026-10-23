@@ -39,12 +39,12 @@
           </div>
 
           <div class="flex items-center gap-2">
-            <a-tooltip :title="`Earned this week: ${stock.tomesEarnedThisWeek} / ${WEEKLY_TOME_CAP}`">
+            <a-tooltip :title="`Earned this week: ${stock.tomesEarnedThisWeek} / ${settings.weeklyTomeCap}`">
               <a-progress
                 type="circle"
                 :size="40"
                 :stroke-width="10"
-                :percent="Math.round((stock.tomesEarnedThisWeek / WEEKLY_TOME_CAP) * 100)"
+                :percent="Math.round((stock.tomesEarnedThisWeek / settings.weeklyTomeCap) * 100)"
                 :show-info="false"
               />
             </a-tooltip>
@@ -52,14 +52,14 @@
               <a-input-number
                 v-model:value="stock.tomesEarnedThisWeek"
                 :min="0"
-                :max="WEEKLY_TOME_CAP"
+                :max="settings.weeklyTomeCap"
                 :precision="0"
                 :controls="false"
                 size="small"
                 class="w-full! [&_input]:text-center! [&_input]:px-0!"
                 aria-label="Tomestones earned this week"
               />
-              <a-typography-text type="secondary" class="text-[11px] leading-none">/ {{ WEEKLY_TOME_CAP }}</a-typography-text>
+              <a-typography-text type="secondary" class="text-[11px] leading-none">/ {{ settings.weeklyTomeCap }}</a-typography-text>
             </div>
           </div>
         </div>
@@ -175,7 +175,7 @@ import { EquipmentStatus, isAccessory } from '@/types/EquipmentType'
 import { equipmentStatusIcons } from '@/constants/icons'
 import { raidFloors, type RaidFloor } from '@/constants/raidFloors'
 import { cofferDefs } from '@/constants/coffers'
-import { WEEKLY_TOME_CAP } from '@/composables/useBisPlan'
+import { useSettingsStore } from '@/stores/settingsStore'
 import { useStockStore } from '@/stores/stockStore'
 import { useLootStore } from '@/stores/lootStore'
 import FloorBook from '../FloorBook.vue'
@@ -186,6 +186,7 @@ import CheckIcon from '../CheckIcon.vue'
 const stockStore = useStockStore()
 const { stock } = storeToRefs(stockStore)
 const loot = useLootStore()
+const settings = useSettingsStore()
 
 const tomeIcon = equipmentStatusIcons[EquipmentStatus.TOME]
 const twineIcon = equipmentStatusIcons[EquipmentStatus.TWINE]

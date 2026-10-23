@@ -18,6 +18,10 @@
                 <template #icon><idcard-outlined /></template>
                 Profile
               </a-menu-item>
+              <a-menu-item key="settings">
+                <template #icon><setting-outlined /></template>
+                Settings
+              </a-menu-item>
               <a-menu-divider />
               <a-menu-item key="logout">
                 <template #icon><logout-outlined /></template>
@@ -59,7 +63,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DownOutlined, IdcardOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons-vue'
+import { DownOutlined, IdcardOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useProfileStore } from '@/stores/profileStore'
 import ProfileModal from './ProfileModal.vue'
@@ -115,6 +119,7 @@ const profile = useProfileStore()
 
 function onUserMenuClick({ key }: { key: string | number }) {
   if (key === 'profile') profile.modalOpen = true
+  else if (key === 'settings') router.push({ name: 'settings' })
   else if (key === 'logout') void onLogout()
 }
 

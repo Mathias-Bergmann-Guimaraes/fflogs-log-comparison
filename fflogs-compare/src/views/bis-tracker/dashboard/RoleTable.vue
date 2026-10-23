@@ -41,11 +41,13 @@ import { EquipmentStatus } from '@/types/EquipmentType'
 import { bisSlots } from '@/constants/bisSlots'
 import { equipmentStatusIcons } from '@/constants/icons'
 import { jobsByRole } from '@/constants/jobs'
-import { WEEKLY_TOME_CAP, trackedFloors } from '@/composables/useBisPlan'
+import { trackedFloors } from '@/composables/useBisPlan'
 import { useBisStore } from '@/stores/bisStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import FloorBook from '../FloorBook.vue'
 
 const bis = useBisStore()
+const settings = useSettingsStore()
 
 const rows = computed(() =>
   jobsByRole.map((group) => {
@@ -53,7 +55,7 @@ const rows = computed(() =>
     const books = bis.booksNeeded(group.jobs)
     const total = group.jobs.length * bisSlots.length
     const acquired = group.jobs.reduce((sum, job) => sum + bisSlots.filter((_, i) => bis.statusOf(job, i) === EquipmentStatus.ACQUIRED).length, 0)
-    const tomeWeeks = Math.ceil(materials.tomes / WEEKLY_TOME_CAP)
+    const tomeWeeks = Math.ceil(materials.tomes / settings.weeklyTomeCap)
     const raidWeeks = Math.max(0, ...trackedFloors.map((f) => books[f.floor]))
     return {
       role: group.role,

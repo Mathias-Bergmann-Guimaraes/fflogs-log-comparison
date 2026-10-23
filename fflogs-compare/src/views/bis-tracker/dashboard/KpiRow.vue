@@ -25,7 +25,7 @@
             <a-typography-text type="secondary" class="text-xs">Weeks of tome capping</a-typography-text>
             <div class="text-2xl font-semibold tabular-nums">{{ weeksText(plan.tomeWeeks.value) }}</div>
             <a-typography-text type="secondary" class="text-xs tabular-nums">
-              {{ plan.tomesNeeded.value.toLocaleString() }} needed · {{ stock.tomes.toLocaleString() }} held · {{ WEEKLY_TOME_CAP }}/week
+              {{ plan.tomesNeeded.value.toLocaleString() }} needed · {{ stock.tomes.toLocaleString() }} held · {{ settings.weeklyTomeCap }}/week
             </a-typography-text>
             <a-progress :percent="tomePercent" size="small" :show-info="false" class="m-0!" />
           </div>
@@ -83,11 +83,13 @@ import { bisSlots } from '@/constants/bisSlots'
 import { equipmentStatusIcons } from '@/constants/icons'
 import { useBisStore } from '@/stores/bisStore'
 import { useStockStore } from '@/stores/stockStore'
-import { WEEKLY_TOME_CAP, formatDate, nextWeeklyReset, useBisPlan } from '@/composables/useBisPlan'
+import { useSettingsStore } from '@/stores/settingsStore'
+import { formatDate, nextWeeklyReset, useBisPlan } from '@/composables/useBisPlan'
 import FloorBook from '../FloorBook.vue'
 import { statusColors } from './chartTheme'
 
 const plan = useBisPlan()
+const settings = useSettingsStore()
 const bis = useBisStore()
 const { stock } = storeToRefs(useStockStore())
 
