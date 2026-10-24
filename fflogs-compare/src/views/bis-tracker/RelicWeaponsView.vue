@@ -75,10 +75,13 @@
     :scroll="{ x: 'max-content' }"
     class="thin-scroll-table"
   >
-    <!-- A stage's cost per weapon sits under its name -->
+    <!-- Under a stage's name: how many jobs have it, then its cost per weapon -->
     <template #headerCell="{ column }">
-      <template v-if="column.cost">
+      <template v-if="column.stages">
         <span class="block whitespace-nowrap">{{ column.title }}</span>
+        <span class="block text-xs font-normal whitespace-nowrap text-gray-400 tabular-nums">{{ stageCounts(column.stages) }}</span>
+      </template>
+      <template v-if="column.cost">
         <span class="inline-flex items-center gap-1 text-xs font-normal text-gray-400 tabular-nums">
           <img :src="costIcon(column.cost)" :alt="column.cost.currency" class="size-4" />
           {{ column.cost.amount.toLocaleString() }}
@@ -206,6 +209,10 @@ const summary = computed(() => {
     finished: rows.value.filter((row) => row.done === active.value.stages.length).length,
   }
 })
+
+// A stage column's header count: jobs done with each of its stages, out of the series' jobs (a joined column shows both)
+const stageCounts = (stages: number[]) =>
+  stages.map((stage) => `${rows.value.filter((row) => row.done > stage).length} / ${rows.value.length}`).join(' · ')
 
 // A summary figure keeps the width of the widest it can get (tabular digits, so ch is one digit), so the blocks after
 // it don't move as it changes
