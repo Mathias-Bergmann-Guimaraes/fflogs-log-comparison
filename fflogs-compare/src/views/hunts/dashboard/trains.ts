@@ -24,7 +24,8 @@ const WORLDS = new Map<string, { world: string; dc: DataCenterName }>(
 const WORLD_WORD_RE = new RegExp(`\\b(${[...WORLDS.keys()].join('|')})\\b`, 'i')
 
 // A trains are pinged per expansion. The hunt server's roles are only known by id, so a ping counts as one of these
-// once the user names it (Name pings on the A-Rank page) with the key or one of the aliases, e.g. "7.0" or "Dawntrail".
+// once it's named (DEFAULT_PING_LABELS, or by the user in Name pings on the A-Rank page) with the key or one of the
+// aliases, e.g. "7.0" or "Dawntrail".
 export type TrainTypeKey = '7.0' | '6.0' | '5.0' | 'old'
 
 // color: an Ant preset, the same as the S rank cards' expansion tags (EXPANSIONS in sRanks.ts)

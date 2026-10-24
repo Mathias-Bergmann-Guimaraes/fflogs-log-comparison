@@ -99,9 +99,23 @@ export function pingLabel(ping: HuntPing, labels: Record<string, string>): strin
   return ping.startsWith('role:') ? `Role …${ping.slice(-4)}` : ping
 }
 
-// The huntPingLabels setting, cleaned of anything that isn't a string
+// Names of the hunt server's roles, so they read right before anyone names them. A user's own names win.
+export const DEFAULT_PING_LABELS: Record<string, string> = {
+  // A rank trains
+  'role:1255412015757918240': '7.0',
+  'role:934264593470070784': '6.0',
+  'role:934264458069561354': '5.0',
+  'role:1091904124301353110': 'Old',
+  // S ranks
+  'role:1252550450251563049': '7.0',
+  'role:932118510841258024': '6.0',
+  'role:932118446882295808': '5.0',
+  'role:932114569390862347': 'Old S',
+}
+
+// The huntPingLabels setting over the defaults, cleaned of anything that isn't a string
 export async function fetchPingLabels(): Promise<Record<string, string>> {
   const { value } = await apiFetch<{ value: unknown }>('/settings/huntPingLabels')
-  if (!value || typeof value !== 'object') return {}
-  return Object.fromEntries(Object.entries(value).filter((e): e is [string, string] => typeof e[1] === 'string'))
+  if (!value || typeof value !== 'object') return { ...DEFAULT_PING_LABELS }
+  return { ...DEFAULT_PING_LABELS, ...Object.fromEntries(Object.entries(value).filter((e): e is [string, string] => typeof e[1] === 'string')) }
 }

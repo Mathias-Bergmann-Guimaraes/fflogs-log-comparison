@@ -70,7 +70,7 @@
       </a-typography-paragraph>
       <a-form layout="vertical">
         <a-form-item v-for="p in rolePings" :key="p.ping" :label="`${p.ping.slice(5)} · ${p.count} messages, last ${relativeTime(p.lastAt, now)}`">
-          <a-input v-model:value="draftLabels[p.ping]" :placeholder="pingLabel(p.ping, {})" allow-clear />
+          <a-input v-model:value="draftLabels[p.ping]" :placeholder="pingLabel(p.ping, DEFAULT_PING_LABELS)" allow-clear />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -83,7 +83,7 @@ import { message } from 'ant-design-vue'
 import { EditOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import { apiFetch } from '@/api/backend'
 import type { HuntMessage, HuntMeta, HuntPage, HuntPing, HuntRank } from '@/types/hunts'
-import { fetchPingLabels, pingLabel, relativeTime } from './discordText'
+import { DEFAULT_PING_LABELS, fetchPingLabels, pingLabel, relativeTime } from './discordText'
 import HuntMessageItem from './HuntMessageItem.vue'
 
 // Unset on the All notifications page; the A / S rank pages only show that rank's channels
@@ -144,7 +144,7 @@ async function saveLabels() {
   savingLabels.value = true
   try {
     await apiFetch('/settings/huntPingLabels', { method: 'PUT', body: { value: cleaned } })
-    labels.value = cleaned
+    labels.value = { ...DEFAULT_PING_LABELS, ...cleaned }
     labelsOpen.value = false
   } catch (err) {
     message.error(err instanceof Error ? err.message : "Couldn't save ping names")
