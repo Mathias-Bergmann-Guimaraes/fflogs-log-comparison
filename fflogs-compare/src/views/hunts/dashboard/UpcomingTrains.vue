@@ -123,8 +123,8 @@
                 <GiftOutlined class="mt-1 text-gray-400" />
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span class="font-medium">
-                    {{ train.marks }} marks{{ train.types.length > 1 ? ' each' : '' }}
-                    <a-tooltip v-if="!train.marksGiven" title="The post doesn't say how many, so this assumes a full train">
+                    {{ marksText(train) }} marks{{ train.types.length > 1 ? ' each' : '' }}
+                    <a-tooltip v-if="!train.marksGiven" title="The post doesn't say how many, so this assumes the count set in Settings">
                       <a-typography-text type="secondary" class="text-xs font-normal">assumed</a-typography-text>
                     </a-tooltip>
                   </span>
@@ -151,7 +151,7 @@ import { CoffeeOutlined, DashboardOutlined, EnvironmentOutlined, GiftOutlined, T
 import { currencyIcons } from '@/constants/icons'
 import { EXPANSIONS } from './sRanks'
 import { pingColor, pingLabel, relativeTime } from '../discordText'
-import { DC_COLORS, TRAIN_TYPES, isActive, trainRewards, trainTypeOfLabel, type SpeedKind, type Train, type TrainSpeed } from './trains'
+import { DC_COLORS, TRAIN_TYPES, isActive, marksOf, trainRewards, trainTypeOfLabel, type SpeedKind, type Train, type TrainSpeed } from './trains'
 
 const props = defineProps<{ trains: Train[]; now: number; labels: Record<string, string> }>()
 
@@ -199,6 +199,10 @@ const startTime = (train: Train) => {
   const at = new Date(train.startsAt).toLocaleTimeString(undefined, { timeStyle: 'short' })
   return isRunning(train) ? `started ${relativeTime(train.startsAt, tick.value)}` : `at ${at}`
 }
+
+// "12", or "12/10" for a double train whose types are assumed to do different counts
+const marksText = (train: Train) =>
+  train.types.length ? [...new Set(train.types.map((type) => marksOf(train, type)))].join('/') : String(train.marks)
 
 const SPEED_LABELS: Record<SpeedKind, string> = { fast: 'Fast', fastish: 'Fast-ish', slow: 'Slow' }
 // Fast a lightning bolt, fast-ish a speedometer, slow a coffee (chill); an unrecognised "Speed: …" the speedometer too

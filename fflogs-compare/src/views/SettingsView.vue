@@ -48,6 +48,9 @@
                 />
               </div>
             </a-form-item>
+            <a-form-item label="A ranks per train" help="Assumed when a post doesn't say how many marks (e.g. &quot;12/12&quot;).">
+              <a-input-number v-model:value="draft.trainMarks" v-bind="marksInput" addon-after="marks" />
+            </a-form-item>
           </div>
         </a-form>
 
@@ -100,6 +103,23 @@
                     addon-after="h"
                     size="small"
                     :aria-label="`${record.expansion} respawn ${column.key === 'min' ? 'from' : 'to'}`"
+                  />
+                </template>
+              </a-table>
+
+              <a-table :columns="marksColumns" :data-source="TRAIN_TYPES" :pagination="false" size="small" row-key="key">
+                <template #bodyCell="{ column, record }">
+                  <a-tooltip v-if="column.key === 'train'" :title="record.expansion">
+                    <a-tag :color="record.color" class="me-0!">{{ record.label }}</a-tag>
+                  </a-tooltip>
+                  <a-input-number
+                    v-else
+                    v-model:value="draft.trainMarksByType[record.key as TrainTypeKey]"
+                    v-bind="marksInput"
+                    :placeholder="String(draft.trainMarks)"
+                    addon-after="marks"
+                    size="small"
+                    :aria-label="`${record.expansion} A ranks per train`"
                   />
                 </template>
               </a-table>
@@ -166,6 +186,7 @@ const tomeCapOptions = TOME_CAPS.map((cap) => ({ value: cap, label: String(cap) 
 const upInput = { ...LIMITS.upMinutes, precision: 0 }
 const respawnInput = { ...LIMITS.respawnHours, step: 0.5, precision: 1 }
 const runningInput = { ...LIMITS.runningMinutes, step: 5, precision: 0 }
+const marksInput = { ...LIMITS.trainMarks, precision: 0 }
 
 // Newest expansion first, like the hunt dashboard
 const expansionRows = (Object.keys(EXPANSIONS).map(Number) as ExpansionKey[]).reverse().map((key) => ({ key, ...EXPANSIONS[key] }))
@@ -180,5 +201,10 @@ const respawnColumns: TableColumnType[] = [
   { key: 'train', title: 'Train' },
   { key: 'min', title: 'Respawn from' },
   { key: 'max', title: 'Respawn to' },
+]
+
+const marksColumns: TableColumnType[] = [
+  { key: 'train', title: 'Train' },
+  { key: 'marks', title: 'A ranks per train' },
 ]
 </script>

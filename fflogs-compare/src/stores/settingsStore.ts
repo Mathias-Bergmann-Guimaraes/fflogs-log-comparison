@@ -12,7 +12,8 @@ import { useAuthStore } from './authStore'
 //   sRankUpMinutes / ssRankUpMinutes: how long an S (SS) rank counts as up after it's reported
 //   respawnMinHours / respawnMaxHours: when an expansion's A ranks start and finish respawning after a train
 //   trainRunningMinutes: how long a train counts as running after its start; trainUntimedMinutes when the post gave no time
-//   *ByExpansion / respawnByType: the advanced per-expansion overrides; a missing entry uses the value above
+//   trainMarks: how many A ranks a train is assumed to do when its post doesn't say
+//   *ByExpansion / *ByType: the advanced per-expansion overrides; a missing entry uses the value above
 export type RespawnOverride = { min?: number; max?: number }
 
 export type Preferences = {
@@ -23,9 +24,11 @@ export type Preferences = {
   respawnMaxHours: number
   trainRunningMinutes: number
   trainUntimedMinutes: number
+  trainMarks: number
   sRankUpByExpansion: Partial<Record<ExpansionKey, number>>
   ssRankUpByExpansion: Partial<Record<ExpansionKey, number>>
   respawnByType: Partial<Record<TrainTypeKey, RespawnOverride>>
+  trainMarksByType: Partial<Record<TrainTypeKey, number>>
 }
 
 export const TOME_CAPS = [450, 900] as const
@@ -39,9 +42,11 @@ export const DEFAULT_PREFERENCES: Preferences = {
   respawnMaxHours: 6,
   trainRunningMinutes: 15,
   trainUntimedMinutes: 30,
+  trainMarks: 12,
   sRankUpByExpansion: {},
   ssRankUpByExpansion: {},
   respawnByType: {},
+  trainMarksByType: {},
 }
 
 // What each number may be, for the page's inputs and for checking what's read back
@@ -49,6 +54,7 @@ export const LIMITS = {
   upMinutes: { min: 1, max: 60 },
   respawnHours: { min: 0.5, max: 24 },
   runningMinutes: { min: 5, max: 120 },
+  trainMarks: { min: 1, max: 30 },
 } as const
 
 const EXPANSION_KEYS: ExpansionKey[] = [2, 3, 4, 5, 6, 7]
@@ -83,6 +89,7 @@ export function normalize(saved: unknown): Preferences {
     respawnMaxHours: Math.max(respawnMinHours, inRange(raw.respawnMaxHours, LIMITS.respawnHours) ?? d.respawnMaxHours),
     trainRunningMinutes: inRange(raw.trainRunningMinutes, LIMITS.runningMinutes) ?? d.trainRunningMinutes,
     trainUntimedMinutes: inRange(raw.trainUntimedMinutes, LIMITS.runningMinutes) ?? d.trainUntimedMinutes,
+    trainMarks: inRange(raw.trainMarks, LIMITS.trainMarks) ?? d.trainMarks,
     sRankUpByExpansion: overrides(EXPANSION_KEYS, raw.sRankUpByExpansion, LIMITS.upMinutes),
     ssRankUpByExpansion: overrides(EXPANSION_KEYS, raw.ssRankUpByExpansion, LIMITS.upMinutes),
     respawnByType: Object.fromEntries(
@@ -91,6 +98,7 @@ export function normalize(saved: unknown): Preferences {
         return o.min === undefined && o.max === undefined ? [] : [[k, o]]
       }),
     ),
+    trainMarksByType: overrides(TRAIN_TYPE_KEYS, raw.trainMarksByType, LIMITS.trainMarks),
   }
 }
 
@@ -137,6 +145,10 @@ export const useSettingsStore = defineStore('settings', () => {
 
   const trainRunningMs = (timed: boolean) => (timed ? preferences.value.trainRunningMinutes : preferences.value.trainUntimedMinutes) * MINUTE_MS
 
+  // A ranks assumed per train of a type, when its post doesn't say
+  const trainMarks = (type: TrainTypeKey | null) =>
+    (type && preferences.value.trainMarksByType[type]) || preferences.value.trainMarks
+
   // Optimistic: apply now, roll back if the save fails. Returns whether it saved.
   async function save(next: Preferences) {
     const previous = preferences.value
@@ -152,5 +164,5 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  return { preferences, weeklyTomeCap, sRankUpMs, respawnWindowMs, trainRunningMs, save }
+  return { preferences, weeklyTomeCap, sRankUpMs, respawnWindowMs, trainRunningMs, trainMarks, save }
 })

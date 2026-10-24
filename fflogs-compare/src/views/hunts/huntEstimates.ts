@@ -1,4 +1,5 @@
-import { DEFAULT_MARKS, MARK_REWARDS, TRAIN_TYPES, type Currency } from './dashboard/trains'
+import { useSettingsStore } from '@/stores/settingsStore'
+import { MARK_REWARDS, TRAIN_TYPES, type Currency } from './dashboard/trains'
 import { EXPANSIONS, S_REWARDS, type ExpansionKey } from './dashboard/sRanks'
 
 // How many hunts pay a given amount of a currency, from the hunt dashboard's own rewards, so the two never disagree.
@@ -22,21 +23,24 @@ function estimate(
   return { kind, label, unit, rows: paying, fewest: Math.min(...counts), most: Math.max(...counts) }
 }
 
-// A full train: DEFAULT_MARKS A ranks
-export const trainsFor = (currency: Currency, needed: number) =>
-  estimate(
+// A train of as many A ranks as Settings assumes for its type
+export function trainsFor(currency: Currency, needed: number) {
+  const marks = useSettingsStore().trainMarks
+  const counts = new Set(TRAIN_TYPES.map((t) => marks(t.key)))
+  return estimate(
     'trains',
     'hunt trains',
-    `a train of ${DEFAULT_MARKS} A ranks`,
+    counts.size === 1 ? `a train of ${[...counts][0]} A ranks` : 'a full train',
     TRAIN_TYPES.map((t) => ({
       key: t.key,
       tag: t.label,
       color: t.color,
       name: t.expansion,
-      each: (MARK_REWARDS[t.key][currency] ?? 0) * DEFAULT_MARKS,
+      each: (MARK_REWARDS[t.key][currency] ?? 0) * marks(t.key),
     })),
     needed,
   )
+}
 
 // S ranks only (SS ranks pay more, but are rare enough not to count on)
 export const sRanksFor = (currency: Currency, needed: number) =>

@@ -70,7 +70,7 @@ export type Train = {
   start: StartingPoint | null
   // Which expansion an "Old" train is, from where it starts: 2 (ARR), 3 (Heavensward) or 4 (Stormblood); null if unknown
   oldExpansion: OldExpansion | null
-  // Marks per expansion, and whether the post said so (otherwise DEFAULT_MARKS)
+  // Marks per expansion, and whether the post said so (otherwise the Settings default for its first type; see marksOf)
   marks: number
   marksGiven: boolean
   speed: TrainSpeed | null
@@ -118,17 +118,19 @@ export function parseConductor(content: string) {
   return name?.replace(/[.\s]+$/, '').trim() || null
 }
 
-// A full train is 12 marks, sometimes more ("14/12 marks": 14 is the real count).
-export const DEFAULT_MARKS = 12
-
+// A full train is 12 marks, sometimes more ("14/12 marks": 14 is the real count). A post that doesn't say gets the
+// count assumed in Settings (12 unless the user changed it, per train type).
 // "12/12 marks" first; a bare "x/y" only when y looks like a train's total, so a date like "19/10" doesn't count
 export function parseMarks(content: string) {
   const text = content.replace(/https?:\/\/\S+|<[^>]+>/g, ' ')
   const fraction = /(?<![\d/.:])(\d{1,2})\s*\/\s*(\d{1,2})(?![\d/.:])(\s*marks?\b)?/gi
   const matches = [...text.matchAll(fraction)].map(([, x, y, word]) => ({ count: Number(x), total: Number(y), word: !!word }))
   const found = matches.find((m) => m.word) ?? matches.find((m) => m.total >= 12 && m.total <= 16)
-  return found && found.count >= 1 && found.count <= 30 ? { count: found.count, given: true } : { count: DEFAULT_MARKS, given: false }
+  return found && found.count >= 1 && found.count <= 30 ? found.count : null
 }
+
+// The marks a train does of one of its types: what the post said, else that type's assumed count
+export const marksOf = (train: Train, type: TrainTypeKey) => (train.marksGiven ? train.marks : useSettingsStore().trainMarks(type))
 
 export type SpeedKind = 'fast' | 'fastish' | 'slow'
 
@@ -176,7 +178,7 @@ const markRewards = (train: Train, type: TrainTypeKey) => (type === 'old' && tra
 export function trainRewards(train: Train): { currency: Currency; amount: number }[] {
   return CURRENCIES.map((currency) => ({
     currency,
-    amount: train.types.reduce((sum, type) => sum + (markRewards(train, type)[currency] ?? 0) * train.marks, 0),
+    amount: train.types.reduce((sum, type) => sum + (markRewards(train, type)[currency] ?? 0) * marksOf(train, type), 0),
   })).filter((r) => r.amount > 0)
 }
 
@@ -204,8 +206,8 @@ export function parseTrain(message: HuntTrainMessage, labels: Record<string, str
     conductor: parseConductor(message.content),
     start: startPoint,
     oldExpansion: types.includes('old') ? oldExpansionOf(startPoint) : null,
-    marks: marks.count,
-    marksGiven: marks.given,
+    marks: marks ?? useSettingsStore().trainMarks(types[0] ?? null),
+    marksGiven: marks !== null,
     speed: parseSpeed(message.content),
     content: message.content,
   }
