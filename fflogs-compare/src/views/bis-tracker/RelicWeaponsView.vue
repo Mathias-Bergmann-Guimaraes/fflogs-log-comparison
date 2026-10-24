@@ -75,11 +75,21 @@
     :scroll="{ x: 'max-content' }"
     class="thin-scroll-table"
   >
-    <!-- Under a stage's name: how many jobs have it, then its cost per weapon -->
+    <!-- Under a stage's name: how many jobs have it (with a box ticking or unticking it for every job), then its cost per weapon -->
     <template #headerCell="{ column }">
       <template v-if="column.stages">
         <span class="block whitespace-nowrap">{{ column.title }}</span>
-        <span class="block text-xs font-normal whitespace-nowrap text-gray-400 tabular-nums">{{ stageCounts(column.stages) }}</span>
+        <div class="flex items-center justify-center gap-1.5">
+          <a-tooltip :title="columnAllDone(column.stages) ? 'Undo for every job' : 'Mark done for every job'" :mouse-enter-delay="0.4">
+            <a-checkbox
+              :checked="columnAllDone(column.stages)"
+              :indeterminate="!columnAllDone(column.stages) && columnAnyDone(column.stages)"
+              :aria-label="`${column.title} for every job`"
+              @change="toggleColumn(column.stages)"
+            />
+          </a-tooltip>
+          <span class="text-xs font-normal whitespace-nowrap text-gray-400 tabular-nums">{{ stageCounts(column.stages) }}</span>
+        </div>
       </template>
       <template v-if="column.cost">
         <span class="inline-flex items-center gap-1 text-xs font-normal text-gray-400 tabular-nums">
@@ -213,6 +223,19 @@ const summary = computed(() => {
 // A stage column's header count: jobs done with each of its stages, out of the series' jobs (a joined column shows both)
 const stageCounts = (stages: number[]) =>
   stages.map((stage) => `${rows.value.filter((row) => row.done > stage).length} / ${rows.value.length}`).join(' · ')
+
+// A column's header box: ticked once every job has all its stages, half-ticked while some job has any of them. Clicking
+// it finishes the column for every job, or undoes it for every job when they all had it.
+const columnAllDone = (stages: number[]) => rows.value.every((row) => row.done > stages[stages.length - 1]!)
+const columnAnyDone = (stages: number[]) => rows.value.some((row) => row.done > stages[0]!)
+const toggleColumn = (stages: number[]) =>
+  relics.setStageForAll(
+    active.value,
+    stages[0]!,
+    stages[stages.length - 1]!,
+    !columnAllDone(stages),
+    rows.value.map((row) => row.job),
+  )
 
 // A summary figure keeps the width of the widest it can get (tabular digits, so ch is one digit), so the blocks after
 // it don't move as it changes

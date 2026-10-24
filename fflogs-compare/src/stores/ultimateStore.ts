@@ -7,6 +7,7 @@ import { characterArgs, characterLabel, fflogsToken, isCharacter, sameCharacter,
 import { ultimateRaids, type UltimateRaid } from '@/constants/ultimateWeapons'
 import { useAuthStore } from './authStore'
 import { useProfileStore } from './profileStore'
+import { syncUltimateToGear } from './weaponSync'
 
 // Saved per account in the ultimateWeapons setting, each keyed by raid:
 // owned: the jobs whose weapon the ultimate has given. Unlike relics there are no stages: each weapon is had or not,
@@ -110,23 +111,33 @@ const errorText = (err: unknown) => (err instanceof Error ? err.message : String
 export const useUltimateStore = defineStore('ultimate', () => {
   const state = ref<UltimateState>(emptyState())
 
-  // On login (and account switch): start empty, then load this user's weapons
+  // On login (and account switch): start empty, then load this user's weapons. `loaded` resolves to whether they came
+  // in, so changes made from elsewhere (a gear set's weapon) don't save over they before it's there.
   const auth = useAuthStore()
+  let loaded = Promise.resolve(false)
   watch(
     () => auth.user?.id,
-    async (userId) => {
+    (userId) => {
       state.value = emptyState()
-      if (userId === undefined) return
-      try {
-        const { value } = await apiFetch<{ value: unknown }>('/settings/ultimateWeapons')
-        if (auth.user?.id !== userId) return // switched account meanwhile
-        state.value = normalize(value)
-      } catch (err) {
-        console.error("Couldn't load ultimate weapons", err)
+      if (userId === undefined) {
+        loaded = Promise.resolve(false)
+        return
       }
+      loaded = (async () => {
+        try {
+          const { value } = await apiFetch<{ value: unknown }>('/settings/ultimateWeapons')
+          if (auth.user?.id !== userId) return false // switched account meanwhile
+          state.value = normalize(value)
+          return true
+        } catch (err) {
+          console.error("Couldn't load ultimate weapons", err)
+          return false
+        }
+      })()
     },
     { immediate: true },
   )
+  const whenLoaded = () => loaded
 
   const has = (raid: UltimateRaid, job: string) => state.value.owned[raid.key]?.includes(job) ?? false
 
@@ -137,8 +148,9 @@ export const useUltimateStore = defineStore('ultimate', () => {
   // Whether ticking this job's weapon used up a held totem
   const usedTotem = (raid: UltimateRaid, job: string) => state.value.consumed[raid.key]?.includes(job) ?? false
 
-  // Optimistic: apply the change to a copy and show it now; put the previous state back if the save fails
-  async function save(change: (next: UltimateState) => void, what: string) {
+  // Optimistic: apply the change to a copy and show it now; put the previous state back if the save fails.
+  // Resolves to whether the save stuck.
+  async function save(change: (next: UltimateState) => void, what: string): Promise<boolean> {
     const previous = state.value
     // A plain copy: structuredClone can't take the reactive proxy
     const next = JSON.parse(JSON.stringify(previous)) as UltimateState
@@ -146,9 +158,11 @@ export const useUltimateStore = defineStore('ultimate', () => {
     state.value = next
     try {
       await apiFetch('/settings/ultimateWeapons', { method: 'PUT', body: { value: next } })
+      return true
     } catch (err) {
       state.value = previous
       message.error(`Couldn't save ${what}: ${errorText(err)}`)
+      return false
     }
   }
 
@@ -160,25 +174,40 @@ export const useUltimateStore = defineStore('ultimate', () => {
 
   // Ticking a weapon uses up a held totem if there is one, and remembers it did; unticking gives back what it used.
   // No totem held: the weapon is still ticked, nothing is used.
-  function toggle(raid: UltimateRaid, job: string) {
-    return save((next) => {
-      const owned = new Set(next.owned[raid.key] ?? [])
-      const consumed = new Set(next.consumed[raid.key] ?? [])
-      let totems = next.totems[raid.key] ?? 0
-      if (owned.delete(job)) {
+  function setHad(next: UltimateState, raid: UltimateRaid, jobs: readonly string[], had: boolean) {
+    const owned = new Set(next.owned[raid.key] ?? [])
+    const consumed = new Set(next.consumed[raid.key] ?? [])
+    let totems = next.totems[raid.key] ?? 0
+    for (const job of jobs) {
+      if (!had && owned.delete(job)) {
         if (consumed.delete(job)) totems = Math.min(totems + 1, MAX_TOTEMS)
-      } else {
+      } else if (had && !owned.has(job)) {
         owned.add(job)
         if (totems > 0) {
           totems--
           consumed.add(job)
         }
       }
-      setJobs(next.owned, raid, owned)
-      setJobs(next.consumed, raid, consumed)
-      if (totems) next.totems[raid.key] = totems
-      else delete next.totems[raid.key]
-    }, 'ultimate weapons')
+    }
+    setJobs(next.owned, raid, owned)
+    setJobs(next.consumed, raid, consumed)
+    if (totems) next.totems[raid.key] = totems
+    else delete next.totems[raid.key]
+  }
+
+  // Gear sets whose weapon is one of these jobs' weapons from the ultimate follow (see weaponSync)
+  async function saveHad(raid: UltimateRaid, jobs: readonly string[], had: boolean) {
+    if (await save((next) => setHad(next, raid, jobs, had), 'ultimate weapons')) void syncUltimateToGear(raid, jobs)
+  }
+
+  function toggle(raid: UltimateRaid, job: string) {
+    return saveHad(raid, [job], !has(raid, job))
+  }
+
+  // Every job's weapon at once, in the given order (so held totems go to the jobs listed first); same totem rule as
+  // ticking each one
+  function setAll(raid: UltimateRaid, had: boolean, jobs: readonly string[] = raid.jobs) {
+    return saveHad(raid, jobs, had)
   }
 
   function setTotemsHeld(raid: UltimateRaid, count: number) {
@@ -252,11 +281,13 @@ export const useUltimateStore = defineStore('ultimate', () => {
   }
 
   return {
+    whenLoaded,
     has,
     countFor,
     totemsHeld,
     usedTotem,
     toggle,
+    setAll,
     setTotemsHeld,
     character,
     syncedAt,

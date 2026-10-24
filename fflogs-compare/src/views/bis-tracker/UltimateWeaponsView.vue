@@ -142,10 +142,21 @@
         <a-tooltip :title="`${column.raid.name} (${column.raid.expansion})`">
           <span class="block whitespace-nowrap">{{ column.raid.short }}</span>
         </a-tooltip>
-        <span class="inline-flex items-center gap-1 text-xs font-normal text-gray-400 tabular-nums">
-          <check-icon v-if="ultimates.countFor(column.raid) === column.raid.jobs.length" class="size-3.5" />
-          {{ ultimates.countFor(column.raid) }} / {{ column.raid.jobs.length }}
-        </span>
+        <!-- A box ticking or unticking the ultimate's weapon for every job -->
+        <div class="flex items-center justify-center gap-1.5">
+          <a-tooltip :title="raidAllHad(column.raid) ? 'Undo for every job' : 'Mark had for every job'" :mouse-enter-delay="0.4">
+            <a-checkbox
+              :checked="raidAllHad(column.raid)"
+              :indeterminate="!raidAllHad(column.raid) && ultimates.countFor(column.raid) > 0"
+              :aria-label="`${column.raid.short} weapon for every job`"
+              @change="toggleRaid(column.raid)"
+            />
+          </a-tooltip>
+          <span class="inline-flex items-center gap-1 text-xs font-normal text-gray-400 tabular-nums">
+            <check-icon v-if="raidAllHad(column.raid)" class="size-3.5" />
+            {{ ultimates.countFor(column.raid) }} / {{ column.raid.jobs.length }}
+          </span>
+        </div>
         <!-- Totems held for this ultimate (any job's weapon takes one); ticking a weapon uses one up -->
         <a-tooltip :title="totemHint(column.raid)">
           <div class="mt-1 flex items-center justify-center gap-1">
@@ -312,6 +323,16 @@ const rows = computed(() =>
     }),
   ),
 )
+
+// A column's header box: every job's weapon had, or not. Clicking it ticks the rest (held totems going to the jobs listed
+// first), or unticks them all when they were all had.
+const raidAllHad = (raid: UltimateRaid) => ultimates.countFor(raid) === raid.jobs.length
+const toggleRaid = (raid: UltimateRaid) =>
+  ultimates.setAll(
+    raid,
+    !raidAllHad(raid),
+    rows.value.filter((row) => raid.weapons[row.job]).map((row) => row.job),
+  )
 
 const summary = computed(() => {
   const total = rows.value.reduce((sum, row) => sum + row.total, 0)

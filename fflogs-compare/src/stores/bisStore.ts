@@ -4,14 +4,17 @@ import { message } from 'ant-design-vue'
 import { apiFetch } from '@/api/backend'
 import { EquipmentStatus, EquipmentType, isAccessory, type GearSource } from '@/types/EquipmentType'
 import { bisSlots } from '@/constants/bisSlots'
+import { WEAPON_SLOT } from '@/constants/gearSharing'
 import { tomeCosts } from '@/constants/tomeCosts'
 import { floorOf, raidFloors, type RaidFloor, type RaidNeeds } from '@/constants/raidFloors'
 import { equipmentIcons, gearPiece, type GearPiece } from '@/constants/icons'
 import { gearItemIds } from '@/constants/gearItems'
 import { ultimateWithin } from '@/constants/ultimates'
+import { ultimateRaids } from '@/constants/ultimateWeapons'
 import { useAuthStore } from './authStore'
 import { useGearSetsStore } from './gearSetsStore'
 import { useItemCatalogStore, type CatalogItem } from './itemCatalogStore'
+import { syncGearToWeapons } from './weaponSync'
 
 // Only slots the user has changed; anything missing is EquipmentStatus.RAID
 type SavedSlots = Record<string, Record<number, EquipmentStatus>>
@@ -34,6 +37,8 @@ const defineBisStore = (setId: number) =>
     const items = ref<SavedItems>({})
     const links = ref<Links>({})
     const loading = ref(false)
+    // Whether this account's progress has come in at least once
+    const loaded = ref(false)
 
     const base = setId ? `/gear-sets/${setId}/bis` : '/bis'
     const gearSets = useGearSetsStore()
@@ -47,6 +52,7 @@ const defineBisStore = (setId: number) =>
       sources.value = state.sources
       items.value = state.items
       links.value = state.links
+      loaded.value = true
       void catalog.ensureItems(Object.values(state.items).flatMap((bySlot) => Object.values(bySlot)))
     }
 
@@ -58,6 +64,9 @@ const defineBisStore = (setId: number) =>
         loading.value = false
       }
     }
+
+    // Loads only if it hasn't yet, for the relic and ultimate pages updating sets that weren't opened
+    const ensureLoaded = () => (loaded.value ? Promise.resolve() : load())
 
     // A custom set's pieces come from its item level range, looked up per job in the background
     watch(definition, (set) => set?.jobs.forEach((job) => void catalog.loadRange(job, set.minIlvl, set.maxIlvl)), { immediate: true })
@@ -90,6 +99,21 @@ const defineBisStore = (setId: number) =>
     function hasUltimate(job: string): boolean {
       const set = definition.value
       return set ? !!ultimateWithin(set.minIlvl, set.maxIlvl) : gearItemIds[job]?.[EquipmentType.WEAPON]?.ultimate !== undefined
+    }
+
+    // The item id of the weapon the slot is after, or got: its pinned item, else this tier's piece (the default set), else
+    // for an ultimate the range's ultimate's weapon, else the range's automatic piece. undefined while unknown.
+    function weaponItem(job: string): number | undefined {
+      const pinned = itemOf(job, WEAPON_SLOT)
+      if (pinned) return pinned
+      const source = sourceOf(job, WEAPON_SLOT)
+      const set = definition.value
+      if (!set) return gearItemIds[job]?.[EquipmentType.WEAPON]?.[source]
+      if (source === 'ultimate') {
+        const ultimate = ultimateWithin(set.minIlvl, set.maxIlvl)
+        return ultimateRaids.find((raid) => raid.name === ultimate?.name)?.weapons[job]
+      }
+      return catalog.autoPiece(job, set.minIlvl, set.maxIlvl, EquipmentType.WEAPON, source)?.id
     }
 
     // What the slot shows: its pinned item, else the piece its source points at (this tier's for the default set,
@@ -133,7 +157,8 @@ const defineBisStore = (setId: number) =>
     }
 
     // Optimistic: update the UI now (the server mirrors this to linked jobs), roll back if it fails.
-    // Resolves to whether the save stuck, for callers that do more on success.
+    // Resolves to whether the save stuck, for callers that do more on success. A relic or ultimate weapon also updates the
+    // Relic and Ultimate Weapons pages (see weaponSync).
     async function setStatus(job: string, slotIndex: number, status: EquipmentStatus): Promise<boolean> {
       const affected = [job, ...linkedOnSlot(job, slotIndex)]
       const previous = affected.map((j) => statusOf(j, slotIndex))
@@ -145,6 +170,7 @@ const defineBisStore = (setId: number) =>
       )
       try {
         await apiFetch(`${base}/${job}/${slotIndex}`, { method: 'PUT', body: { status } })
+        if (slotIndex === WEAPON_SLOT) void syncGearToWeapons(setId, affected, previous)
         return true
       } catch (err) {
         affected.forEach((j, i) => {
@@ -179,8 +205,10 @@ const defineBisStore = (setId: number) =>
     // Several slots at once (an imported BiS set), optionally pinning items too; linked jobs follow on the server.
     // Throws so the import dialog can stay open.
     async function setStatuses(job: string, statuses: Record<number, EquipmentStatus>, pinned?: Record<number, number | null>) {
+      const previous = statusOf(job, WEAPON_SLOT)
       await apiFetch(`${base}/${job}`, { method: 'PUT', body: { statuses, items: pinned } })
       await fetchState()
+      void syncGearToWeapons(setId, [job], [previous])
     }
 
     // What each unfinished item still costs. A Tome item needs the tome piece and then its upgrade
@@ -290,6 +318,7 @@ const defineBisStore = (setId: number) =>
         sources.value = {}
         items.value = {}
         links.value = {}
+        loaded.value = false
       },
     )
 
@@ -298,10 +327,12 @@ const defineBisStore = (setId: number) =>
       links,
       loading,
       load,
+      ensureLoaded,
       statusOf,
       sourceOf,
       itemOf,
       hasUltimate,
+      weaponItem,
       pieceOf,
       itemOptions,
       linkedOnSlot,
