@@ -4,7 +4,17 @@ import { type AuthEnv, requireAuth } from './auth.ts'
 
 // Per-user UI settings, stored as opaque JSON: the client validates what it reads back.
 // Only these keys are accepted, so this can't become free-form storage.
-const KEYS = new Set(['dashboardLayout', 'favoriteJobs', 'huntPingLabels', 'huntAlerts', 'relicWeapons', 'ultimateWeapons', 'profile', 'preferences'])
+const KEYS = new Set([
+  'dashboardLayout',
+  'favoriteJobs',
+  'huntPingLabels',
+  'huntAlerts',
+  'relicWeapons',
+  'ultimateWeapons',
+  'profile',
+  'preferences',
+  'weekly',
+])
 const MAX_BYTES = 16 * 1024
 
 export const settings = new Hono<AuthEnv>()

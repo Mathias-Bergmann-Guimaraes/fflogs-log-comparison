@@ -7,6 +7,7 @@ import {
   AppstoreOutlined,
   BarChartOutlined,
   BellOutlined,
+  CalendarOutlined,
   CrownOutlined,
   DashboardOutlined,
   FireOutlined,
@@ -139,6 +140,12 @@ const router = createRouter({
               meta: { menuLabel: 'All notifications', menuIcon: markRaw(BellOutlined), requiresAuth: true },
             },
           ],
+        },
+        {
+          path: 'weekly',
+          name: 'weekly',
+          component: () => import('@/views/weekly/WeeklyView.vue'),
+          meta: { menuLabel: 'Weekly', menuIcon: markRaw(CalendarOutlined), requiresAuth: true },
         },
         {
           path: 'settings',
