@@ -191,6 +191,16 @@ const migrations: string[] = [
     fetched_at   INTEGER NOT NULL
   );
   `,
+  // 12: the Fashion Report guide images (server/fashion.ts), kept for the same reason. id is the Discord message's.
+  `
+  CREATE TABLE fashion_reports (
+    id           TEXT PRIMARY KEY,
+    content_type TEXT NOT NULL,
+    data         BLOB NOT NULL,
+    posted_at    INTEGER NOT NULL,
+    fetched_at   INTEGER NOT NULL
+  );
+  `,
 ]
 
 // node:sqlite has no transaction helper; synchronous fn only, so nothing else can interleave

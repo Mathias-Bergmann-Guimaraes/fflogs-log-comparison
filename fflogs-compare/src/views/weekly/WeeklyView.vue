@@ -50,9 +50,12 @@
               <span class="truncate">{{ card.title ?? card.activities[0]!.name }}</span>
             </span>
           </template>
-          <!-- A card of its own: its hide button sits in the header -->
+          <!-- A card of its own: its favorite and hide buttons sit in the header -->
           <template v-if="!card.title" #extra>
-            <hide-button :activity="card.activities[0]!" />
+            <span class="flex items-center">
+              <favorite-button :activity="card.activities[0]!" />
+              <hide-button :activity="card.activities[0]!" />
+            </span>
           </template>
 
           <div class="flex flex-col gap-3">
@@ -64,7 +67,10 @@
             >
               <div v-if="card.title" class="flex items-center justify-between gap-2">
                 <span class="truncate font-medium" :class="weekly.isDone(activity) && 'text-gray-500 line-through'">{{ activity.name }}</span>
-                <hide-button :activity="activity" />
+                <span class="flex shrink-0 items-center">
+                  <favorite-button :activity="activity" />
+                  <hide-button :activity="activity" />
+                </span>
               </div>
               <a-typography-text type="secondary" class="text-xs">{{ activity.description }}</a-typography-text>
               <div class="flex flex-wrap items-center gap-2">
@@ -91,6 +97,7 @@
                   <export-outlined />
                 </a-button>
               </div>
+              <fashion-report v-if="activity.id === 'fashionReport'" />
             </div>
           </div>
         </a-card>
@@ -103,9 +110,11 @@
 import { computed, ref } from 'vue'
 import type { CheckboxChangeEvent } from 'ant-design-vue/es/checkbox/interface'
 import { CheckCircleFilled, ExportOutlined, UndoOutlined } from '@ant-design/icons-vue'
-import { weeklyGroups, type WeeklyCard } from '@/constants/weeklyActivities'
+import { weeklyGroups, type WeeklyCard, type WeeklyGroup } from '@/constants/weeklyActivities'
 import { useWeeklyStore } from '@/stores/weeklyStore'
 import { formatDuration } from '@/views/hunts/dashboard/trains'
+import FashionReport from './FashionReport.vue'
+import FavoriteButton from './FavoriteButton.vue'
 import HideButton from './HideButton.vue'
 
 const DONE_COLOR = '#49aa19'
@@ -113,17 +122,27 @@ const DONE_COLOR = '#49aa19'
 const weekly = useWeeklyStore()
 const showHidden = ref(false)
 
+// Favorites come first, a card each, and leave their usual category.
 // Hidden activities stay out unless asked for; a card (and a category) with nothing left to show goes too
-const groups = computed(() =>
-  weeklyGroups
+const groups = computed(() => {
+  const favorites: WeeklyGroup = {
+    key: 'favorites',
+    title: 'Favorites',
+    cards: weekly.favorites.map((activity) => ({ key: activity.id, activities: [activity] })),
+  }
+  const rest = weeklyGroups.map((group) => ({
+    ...group,
+    cards: group.cards.map((card) => ({ ...card, activities: card.activities.filter((a) => !weekly.isFavorite(a.id)) })),
+  }))
+  return [favorites, ...rest]
     .map((group) => ({
       ...group,
       cards: group.cards
         .map((card) => ({ ...card, activities: card.activities.filter((a) => showHidden.value || !weekly.isHidden(a.id)) }))
         .filter((card) => card.activities.length),
     }))
-    .filter((group) => group.cards.length),
-)
+    .filter((group) => group.cards.length)
+})
 
 // Done once everything on it that isn't hidden is done
 function cardDone(card: WeeklyCard) {

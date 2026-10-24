@@ -9,7 +9,7 @@ import type { HuntAttachment, HuntEmbed, HuntMessage, HuntMeta, HuntPage, HuntRa
 // Messages of one Discord channel, stored in hunt_messages. They get here either way (or both):
 // - push: another bot that can see the channel POSTs each message to /api/hunts/ingest with a shared secret
 // - poll: we read the channel ourselves through the REST API with our own bot token
-const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
+export const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
 const CHANNEL_ID = process.env.DISCORD_HUNT_CHANNEL_ID
 const POLL_MS = Math.max(5, Number(process.env.DISCORD_POLL_SECONDS ?? 20)) * 1000
 const INGEST_SECRET = process.env.HUNT_INGEST_SECRET
@@ -27,7 +27,7 @@ const DISCORD_EPOCH = 1420070400000n
 const PAGE_SIZE = 50
 
 // Only the parts of Discord's message object we use
-type DiscordMessage = {
+export type DiscordMessage = {
   id: string
   channel_id?: string
   // Not Discord's: a pushing bot adds it, since messages only carry the channel id
@@ -55,10 +55,10 @@ type DiscordMessage = {
 }
 
 // Default, reply and slash-command messages; joins, pins, thread notices etc. are skipped
-const CONTENT_TYPES = new Set([0, 19, 20])
+export const CONTENT_TYPES = new Set([0, 19, 20])
 
-const snowflakeTime = (id: string) => Number((BigInt(id) >> 22n) + DISCORD_EPOCH)
-const isSnowflake = (id: string | undefined): id is string => !!id && /^\d{1,20}$/.test(id)
+export const snowflakeTime = (id: string) => Number((BigInt(id) >> 22n) + DISCORD_EPOCH)
+export const isSnowflake = (id: string | undefined): id is string => !!id && /^\d{1,20}$/.test(id)
 
 // Mentions only ping from the content, never from embeds. Followed (crossposted) messages keep the raw
 // <@&id> of the hunt server's roles, which can't be resolved to names from here, so they're labelled client side.
@@ -119,7 +119,7 @@ function save(m: DiscordMessage) {
   )
 }
 
-async function discordGet<T>(path: string): Promise<T> {
+export async function discordGet<T>(path: string): Promise<T> {
   for (let attempt = 0; attempt < 3; attempt++) {
     const res = await fetch(`${DISCORD_API}${path}`, {
       headers: { Authorization: `Bot ${BOT_TOKEN}`, 'User-Agent': 'DiscordBot (ffxiv-companion, 1.0)' },
@@ -238,7 +238,7 @@ const toMessage = (r: Row): HuntMessage => ({
 
 let lastPushAt: number | null = null
 
-const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+export const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
 
 // Checks the fields save() relies on; the rest of Discord's message object is optional and read defensively
 function toDiscordMessage(v: unknown): DiscordMessage | null {
@@ -270,7 +270,7 @@ function toDiscordMessage(v: unknown): DiscordMessage | null {
 }
 
 // Compared as hashes so the comparison takes the same time whatever the input's length
-function hasIngestSecret(header: string | undefined) {
+export function hasIngestSecret(header: string | undefined) {
   if (!pushEnabled || !header?.startsWith('Bearer ')) return false
   const digest = (s: string) => createHash('sha256').update(s).digest()
   return timingSafeEqual(digest(header.slice(7)), digest(INGEST_SECRET!))

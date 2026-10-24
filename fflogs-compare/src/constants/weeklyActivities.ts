@@ -121,7 +121,7 @@ export const weeklyGroups: WeeklyGroup[] = [
       single({
         id: 'fashionReport',
         name: 'Fashion Report',
-        description: 'Judging opens on Friday and runs until the reset.',
+        description: 'Judging opens on Friday (08:00 UTC) and runs until the reset. Four tries a week; 80 points or more pays out.',
       }),
       single({
         id: 'jumboCactpot',

@@ -9,6 +9,7 @@ import { bis } from './bis.ts'
 import { gearSets } from './gearSets.ts'
 import { settings } from './settings.ts'
 import { hunts, startHuntSync } from './hunts.ts'
+import { fashion, startFashionSync } from './fashion.ts'
 import { userFeatures } from './features.ts'
 import { startAdminServer } from './admin.ts'
 
@@ -19,9 +20,10 @@ const USERNAME_RE = /^[\w.-]{3,32}$/
 const api = new Hono<AuthEnv>()
 
 // Rejects cross-site form posts; the session cookie is SameSite=Lax as a second layer.
-// Skipped for the hunt ingest routes: they're called by a bot with a bearer secret, which browsers never attach on their own.
+// Skipped for the hunt and Fashion Report ingest routes: they're called by a bot with a bearer secret, which browsers never attach on their own.
 const csrfCheck = csrf()
-api.use((c, next) => (c.req.path.startsWith('/api/hunts/ingest') ? next() : csrfCheck(c, next)))
+const BOT_ROUTES = ['/api/hunts/ingest', '/api/fashion/ingest']
+api.use((c, next) => (BOT_ROUTES.some((route) => c.req.path.startsWith(route)) ? next() : csrfCheck(c, next)))
 
 // --- Auth ---
 
@@ -87,6 +89,7 @@ api.route('/bis', bis)
 api.route('/gear-sets', gearSets)
 api.route('/settings', settings)
 api.route('/hunts', hunts)
+api.route('/fashion', fashion)
 
 // --- App ---
 
@@ -103,6 +106,7 @@ if (process.env.NODE_ENV === 'production') {
 purgeExpiredSessions()
 setInterval(purgeExpiredSessions, 60 * 60 * 1000).unref()
 startHuntSync()
+startFashionSync()
 
 serve({ fetch: app.fetch, port: PORT }, (info) => {
   console.log(`API listening on http://localhost:${info.port}`)
