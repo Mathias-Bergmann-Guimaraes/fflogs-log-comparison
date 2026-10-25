@@ -16,8 +16,10 @@
   scrollbar-color: #434343 transparent;
 }
 
-/* The same thin dark scrollbar on a table that scrolls sideways (BiS Relic Weapons stages) */
-.thin-scroll-table .ant-table-content {
+/* The same thin dark scrollbar on a table that scrolls sideways (BiS Relic Weapons stages)
+   or has a fixed-height body via `:scroll="{ y }"` (hunt dashboard's top conductors) */
+.thin-scroll-table .ant-table-content,
+.thin-scroll-table .ant-table-body {
   scrollbar-width: thin;
   scrollbar-color: #434343 transparent;
 }

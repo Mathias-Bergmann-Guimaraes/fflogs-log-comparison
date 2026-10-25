@@ -1,7 +1,7 @@
 <template>
   <a-card size="small" :title="`Top conductors (${DAYS} days)`" class="h-full">
     <a-empty v-if="!rows.length" :image="Empty.PRESENTED_IMAGE_SIMPLE" description="No conductor named in a post yet" />
-    <a-table v-else :columns="columns" :data-source="rows" :pagination="false" size="small" row-key="name" :scroll="{ y: 300 }">
+    <a-table v-else :columns="columns" :data-source="rows" :pagination="false" size="small" row-key="name" :scroll="{ y: 300 }" class="thin-scroll-table">
       <template #bodyCell="{ column, record, index }">
         <template v-if="column.key === 'rank'">
           <span :class="index < 3 ? 'font-semibold text-orange-400' : 'text-gray-500'">{{ index + 1 }}</span>

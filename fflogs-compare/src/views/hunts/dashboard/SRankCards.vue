@@ -50,10 +50,11 @@
     <a-badge-ribbon v-for="sRank in up" :key="sRank.id" :text="sRank.ss ? 'SS rank' : 'S rank'" :color="S_RANK_COLOR">
       <!-- Pinned ones get a gold border, like the favorite jobs' cards on the BiS tracker -->
       <a-card size="small" :class="['min-h-64', isPinned(sRank) && 'border-amber-400! shadow-[0_0_12px_rgba(251,191,36,0.25)]']">
-        <!-- Horizontal: the post's map on the left (click to enlarge), the details on the right; stacked on a phone -->
+        <!-- Horizontal: the post's map on the left (click to enlarge), the details on the right; stacked on a phone.
+             The map is 230px so the card stays 256px (230 + 2 × 12 padding + 2 borders), level with the A rank cards. -->
         <div class="flex flex-col gap-4 sm:flex-row">
-          <div v-if="sRank.image" class="mx-auto size-58 shrink-0 overflow-hidden rounded-md bg-black/30 sm:mx-0">
-            <a-image :src="sRank.image" :alt="`Map of ${sRank.zone ?? sRank.mark}`" :width="232" :height="232" class="object-contain" />
+          <div v-if="sRank.image" class="mx-auto size-[230px] shrink-0 overflow-hidden rounded-md bg-black/30 sm:mx-0">
+            <a-image :src="sRank.image" :alt="`Map of ${sRank.zone ?? sRank.mark}`" :width="230" :height="230" class="object-contain" />
           </div>
 
           <div class="flex min-w-0 flex-1 flex-col">
