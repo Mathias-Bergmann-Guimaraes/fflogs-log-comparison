@@ -27,12 +27,12 @@ const CODE_PREFIX = 'XIVC-'
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const MAX_PENDING = 10
 
+// No parameter properties: production runs this file with --experimental-strip-types, which only allows erasable syntax
 class LodestoneError extends Error {
-  constructor(
-    public status: ContentfulStatusCode,
-    message: string,
-  ) {
+  status: ContentfulStatusCode
+  constructor(status: ContentfulStatusCode, message: string) {
     super(message)
+    this.status = status
   }
 }
 

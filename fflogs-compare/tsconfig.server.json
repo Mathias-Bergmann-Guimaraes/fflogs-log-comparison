@@ -1,11 +1,13 @@
 // TSConfig for the API server in server/, run with tsx (dev) or Node's type-stripping.
 {
   "extends": "@tsconfig/node24/tsconfig.json",
-  "include": ["server/**/*", "scripts/**/*", "src/constants/gearSharing.ts", "src/types/hunts.ts", "src/types/admin.ts", "src/types/plugin.ts"],
+  "include": ["server/**/*", "scripts/**/*", "src/constants/gearSharing.ts", "src/types/hunts.ts", "src/types/admin.ts", "src/types/plugin.ts", "src/types/characters.ts"],
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "allowImportingTsExtensions": true,
+    // Production runs the server with --experimental-strip-types, which can't run enums, namespaces or parameter properties
+    "erasableSyntaxOnly": true,
     "types": ["node"],
     "noEmit": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.server.tsbuildinfo"
