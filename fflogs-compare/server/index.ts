@@ -10,6 +10,7 @@ import { gearSets } from './gearSets.ts'
 import { settings } from './settings.ts'
 import { hunts, startHuntSync } from './hunts.ts'
 import { fashion, startFashionSync } from './fashion.ts'
+import { plugin } from './plugin.ts'
 import { userFeatures } from './features.ts'
 import { startAdminServer } from './admin.ts'
 
@@ -20,9 +21,10 @@ const USERNAME_RE = /^[\w.-]{3,32}$/
 const api = new Hono<AuthEnv>()
 
 // Rejects cross-site form posts; the session cookie is SameSite=Lax as a second layer.
-// Skipped for the hunt and Fashion Report ingest routes: they're called by a bot with a bearer secret, which browsers never attach on their own.
+// Skipped for the hunt and Fashion Report ingest routes and the game plugin's: they're called by a bot or plugin with a bearer
+// secret, which browsers never attach on their own.
 const csrfCheck = csrf()
-const BOT_ROUTES = ['/api/hunts/ingest', '/api/fashion/ingest']
+const BOT_ROUTES = ['/api/hunts/ingest', '/api/fashion/ingest', '/api/plugin/ingest', '/api/plugin/ping']
 api.use((c, next) => (BOT_ROUTES.some((route) => c.req.path.startsWith(route)) ? next() : csrfCheck(c, next)))
 
 // --- Auth ---
@@ -90,6 +92,7 @@ api.route('/gear-sets', gearSets)
 api.route('/settings', settings)
 api.route('/hunts', hunts)
 api.route('/fashion', fashion)
+api.route('/plugin', plugin)
 
 // --- App ---
 

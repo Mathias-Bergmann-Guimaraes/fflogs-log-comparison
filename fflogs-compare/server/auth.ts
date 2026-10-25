@@ -27,7 +27,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return timingSafeEqual(actual, expected)
 }
 
-const sha256 = (value: string) => createHash('sha256').update(value).digest('hex')
+export const sha256 = (value: string) => createHash('sha256').update(value).digest('hex')
 
 export function startSession(c: Context, userId: number) {
   const token = randomBytes(32).toString('base64url')

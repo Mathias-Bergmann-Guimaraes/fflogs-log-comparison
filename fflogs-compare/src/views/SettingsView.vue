@@ -134,6 +134,8 @@
         <a-button :disabled="isDefault" @click="draft = toDraft(DEFAULT_PREFERENCES)">Reset to defaults</a-button>
         <a-typography-text v-if="dirty" type="secondary" class="text-xs">Unsaved changes</a-typography-text>
       </div>
+
+      <PluginSettingsCard />
     </div>
   </div>
 </template>
@@ -145,6 +147,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { DEFAULT_PREFERENCES, LIMITS, TOME_CAPS, normalize, useSettingsStore, type Preferences } from '@/stores/settingsStore'
 import { EXPANSIONS, hasSSRanks, type ExpansionKey } from './hunts/dashboard/sRanks'
 import { TRAIN_TYPES, type TrainTypeKey } from './hunts/dashboard/trains'
+import PluginSettingsCard from './PluginSettingsCard.vue'
 
 const auth = useAuthStore()
 const settings = useSettingsStore()

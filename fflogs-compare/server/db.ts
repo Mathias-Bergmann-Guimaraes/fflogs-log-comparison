@@ -201,6 +201,43 @@ const migrations: string[] = [
     fetched_at   INTEGER NOT NULL
   );
   `,
+  // 13: data a game plugin sends (server/plugin.ts). The plugin logs in with a token made on the Settings page; only
+  // its SHA-256 is stored, like sessions. Snapshots keep the latest of each kind per character (character_id: the
+  // game's content id); events are appended, and only the newest are kept. data is JSON (src/types/plugin.ts).
+  // An event's client_id is the plugin's own id for it, so a resent event isn't stored twice (null when it has none).
+  `
+  CREATE TABLE plugin_tokens (
+    id           INTEGER PRIMARY KEY,
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash   TEXT NOT NULL UNIQUE,
+    name         TEXT NOT NULL,
+    created_at   INTEGER NOT NULL,
+    last_used_at INTEGER
+  );
+
+  CREATE TABLE plugin_snapshots (
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    character_id TEXT NOT NULL,
+    kind         TEXT NOT NULL,
+    data         TEXT NOT NULL,
+    captured_at  INTEGER NOT NULL,
+    received_at  INTEGER NOT NULL,
+    PRIMARY KEY (user_id, character_id, kind)
+  );
+
+  CREATE TABLE plugin_events (
+    id           INTEGER PRIMARY KEY,
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    character_id TEXT NOT NULL,
+    type         TEXT NOT NULL,
+    client_id    TEXT,
+    data         TEXT NOT NULL,
+    occurred_at  INTEGER NOT NULL,
+    received_at  INTEGER NOT NULL,
+    UNIQUE (user_id, client_id)
+  );
+  CREATE INDEX plugin_events_user ON plugin_events (user_id, occurred_at DESC);
+  `,
 ]
 
 // node:sqlite has no transaction helper; synchronous fn only, so nothing else can interleave
