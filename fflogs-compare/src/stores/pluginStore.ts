@@ -183,5 +183,5 @@ export const usePluginStore = defineStore('plugin', () => {
     { immediate: true },
   )
 
-  return { data, load, characterName, weekly, owns, sent }
+  return { data, load, characterName, weekly, fields, owns, sent }
 })

@@ -12,14 +12,20 @@
         </a-form>
       </a-card>
 
-      <a-card size="small" title="Game plugin marks">
+      <a-card size="small" title="Game plugin display">
         <a-form layout="vertical">
           <a-form-item
             label="Show what the plugin can track"
             help="Values the game plugin filled in always get a cyan plug. With this on, everything else it could fill in gets a gray one."
-            class="mb-0!"
           >
             <a-switch v-model:checked="draft.showPluginTrackable" />
+          </a-form-item>
+          <a-form-item
+            label="Debug: show everything the plugin sent"
+            help="Adds a card at the bottom of this page listing all the plugin's data, kept up to date while it's open."
+            class="mb-0!"
+          >
+            <a-switch v-model:checked="draft.showPluginDebug" />
           </a-form-item>
         </a-form>
       </a-card>
@@ -60,7 +66,7 @@
                 />
               </div>
             </a-form-item>
-            <a-form-item label="A ranks per train" help="Assumed when a post doesn't say how many marks (e.g. &quot;12/12&quot;).">
+            <a-form-item label="A ranks per train" help='Assumed when a post doesn&apos;t say how many marks (e.g. "12/12").'>
               <a-input-number v-model:value="draft.trainMarks" v-bind="marksInput" addon-after="marks" />
             </a-form-item>
           </div>
@@ -149,6 +155,9 @@
 
       <PluginSettingsCard />
     </div>
+
+    <!-- Full width, outside the settings column. The draft's, so it shows (or goes) as soon as it's switched -->
+    <PluginDebugCard v-if="draft.showPluginDebug" class="mt-4!" />
   </div>
 </template>
 
@@ -159,6 +168,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { DEFAULT_PREFERENCES, LIMITS, TOME_CAPS, normalize, useSettingsStore, type Preferences } from '@/stores/settingsStore'
 import { EXPANSIONS, hasSSRanks, type ExpansionKey } from './hunts/dashboard/sRanks'
 import { TRAIN_TYPES, type TrainTypeKey } from './hunts/dashboard/trains'
+import PluginDebugCard from './PluginDebugCard.vue'
 import PluginSettingsCard from './PluginSettingsCard.vue'
 
 const auth = useAuthStore()

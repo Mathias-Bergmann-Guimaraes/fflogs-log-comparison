@@ -15,6 +15,7 @@ import { useAuthStore } from './authStore'
 //   trainMarks: how many A ranks a train is assumed to do when its post doesn't say
 //   *ByExpansion / *ByType: the advanced per-expansion overrides; a missing entry uses the value above
 //   showPluginTrackable: also show the game plugin's mark, grayed out, on values it could fill in but hasn't (PluginMark)
+//   showPluginDebug: list everything the game plugin has sent on the Settings page (PluginDebugCard)
 export type RespawnOverride = { min?: number; max?: number }
 
 export type Preferences = {
@@ -31,6 +32,7 @@ export type Preferences = {
   respawnByType: Partial<Record<TrainTypeKey, RespawnOverride>>
   trainMarksByType: Partial<Record<TrainTypeKey, number>>
   showPluginTrackable: boolean
+  showPluginDebug: boolean
 }
 
 export const TOME_CAPS = [450, 900] as const
@@ -50,6 +52,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   respawnByType: {},
   trainMarksByType: {},
   showPluginTrackable: false,
+  showPluginDebug: false,
 }
 
 // What each number may be, for the page's inputs and for checking what's read back
@@ -103,6 +106,7 @@ export function normalize(saved: unknown): Preferences {
     ),
     trainMarksByType: overrides(TRAIN_TYPE_KEYS, raw.trainMarksByType, LIMITS.trainMarks),
     showPluginTrackable: raw.showPluginTrackable === true,
+    showPluginDebug: raw.showPluginDebug === true,
   }
 }
 
@@ -151,8 +155,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const trainRunningMs = (timed: boolean) => (timed ? preferences.value.trainRunningMinutes : preferences.value.trainUntimedMinutes) * MINUTE_MS
 
   // A ranks assumed per train of a type, when its post doesn't say
-  const trainMarks = (type: TrainTypeKey | null) =>
-    (type && preferences.value.trainMarksByType[type]) || preferences.value.trainMarks
+  const trainMarks = (type: TrainTypeKey | null) => (type && preferences.value.trainMarksByType[type]) || preferences.value.trainMarks
 
   // Optimistic: apply now, roll back if the save fails. Returns whether it saved.
   async function save(next: Preferences) {
