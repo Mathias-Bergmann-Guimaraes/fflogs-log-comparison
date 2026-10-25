@@ -19,6 +19,7 @@
             <check-icon v-if="status === EquipmentStatus.ACQUIRED" class="size-4" />
             <img v-else :src="equipmentStatusIcons[status]" alt="" class="size-4" />
             {{ equipmentStatuses[status].label }}
+            <api-outlined v-if="plugMark" :style="{ color: plugMark.color }" role="img" :aria-label="plugMark.label" />
           </span>
         </span>
         <!-- Badge sits on the inner corner, so both columns mirror each other -->
@@ -29,6 +30,15 @@
         >
           <check-icon v-if="status === EquipmentStatus.ACQUIRED" class="size-full" />
           <img v-else :src="equipmentStatusIcons[status]" :alt="equipmentStatuses[status].label" class="size-full" />
+        </span>
+        <!-- The game plugin saw the character with it (or, gray, could check): the plug on the inner top corner
+             (the status has the bottom one) -->
+        <span
+          v-if="!wide && plugMark"
+          class="absolute -top-1.5 flex size-5 items-center justify-center rounded-full bg-gray-900 text-xs"
+          :class="isAccessory(type) ? '-left-1.5' : '-right-1.5'"
+        >
+          <api-outlined :style="{ color: plugMark.color }" role="img" :aria-label="plugMark.label" />
         </span>
       </button>
     </a-tooltip>
@@ -73,7 +83,10 @@ import type { CatalogItem } from '@/stores/itemCatalogStore'
 
 import CheckIcon from './CheckIcon.vue'
 import { computed } from 'vue'
+import { ApiOutlined } from '@ant-design/icons-vue'
 import { jobDisplayName } from '@/constants/jobs'
+import { PLUGIN_COLOR, PLUGIN_TRACKABLE_COLOR, PLUGIN_TRACKABLE_TEXT, usePluginStore } from '@/stores/pluginStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 const props = defineProps<{
   type: EquipmentType
@@ -89,6 +102,10 @@ const props = defineProps<{
   itemId?: number
   // Weapon only: whether the tier has an ultimate, which makes it one of the options
   ultimate?: boolean
+  // When the game plugin last saw the character with this item (bisStore.ownedAt); left out if it hasn't
+  ownedAt?: number
+  // Whether the slot's item is known, so the game plugin could check for it (the gray plug, when Settings asks for it)
+  trackable?: boolean
 }>()
 
 const status = defineModel<EquipmentStatus>('status', { default: EquipmentStatus.RAID })
@@ -105,9 +122,22 @@ function onMenuClick({ key }: { key: string | number }) {
   if (itemKey(props.itemId) !== value) emit('update:item', id === 'auto' ? null : Number(id))
 }
 
+const plugin = usePluginStore()
+const settings = useSettingsStore()
+
+// Cyan while the plugin saw the character with the item; gray where it could check but hasn't seen it, if Settings asks
+const plugMark = computed(() => {
+  if (props.ownedAt) return { color: PLUGIN_COLOR, label: 'You have it (game plugin)' }
+  if (props.trackable && settings.showPluginTrackable) return { color: PLUGIN_TRACKABLE_COLOR, label: PLUGIN_TRACKABLE_TEXT }
+  return undefined
+})
+
 const title = computed(() => {
   const statusLabel = equipmentStatuses[status.value].label
   const label = props.piece.name ? `${statusLabel}: ${props.piece.name}` : statusLabel
-  return props.linkedJobs?.length ? `${label} · linked with ${props.linkedJobs.map(jobDisplayName).join(', ')}` : label
+  const linked = props.linkedJobs?.length ? `${label} · linked with ${props.linkedJobs.map(jobDisplayName).join(', ')}` : label
+  if (!props.ownedAt) return plugMark.value ? `${linked} · ${PLUGIN_TRACKABLE_TEXT}` : linked
+  const when = new Date(props.ownedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  return `${linked} · You have it: the game plugin saw it${plugin.characterName ? ` on ${plugin.characterName}` : ''}, ${when}`
 })
 </script>

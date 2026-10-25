@@ -2,9 +2,12 @@
   <!-- This week's tomestones against the cap: the same number as the BiS dashboard's stock (stockStore) -->
   <div class="flex flex-col gap-2">
     <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-      <span class="text-2xl font-semibold tabular-nums">
-        {{ earned.toLocaleString() }}
-        <a-typography-text type="secondary" class="text-sm font-normal">/ {{ cap.toLocaleString() }}</a-typography-text>
+      <span class="flex items-baseline gap-1.5">
+        <span class="text-2xl font-semibold tabular-nums">
+          {{ earned.toLocaleString() }}
+          <a-typography-text type="secondary" class="text-sm font-normal">/ {{ cap.toLocaleString() }}</a-typography-text>
+        </span>
+        <plugin-mark field="tomesEarnedThisWeek" :value="stock.tomesEarnedThisWeek" />
       </span>
       <a-tag v-if="capped" color="green" class="m-0!">Capped</a-tag>
       <a-typography-text v-else type="secondary" class="text-xs">{{ (cap - earned).toLocaleString() }} to go</a-typography-text>
@@ -30,10 +33,13 @@
       </a-space-compact>
     </div>
 
-    <a-typography-text type="secondary" class="text-xs">
-      <img :src="tomeIcon" alt="" class="mr-1 inline size-4 align-text-bottom" />{{ stock.tomes.toLocaleString() }} /
-      {{ MAX_TOMES_HELD.toLocaleString() }} held · kept in this browser
-    </a-typography-text>
+    <span class="flex flex-wrap items-center gap-1 text-xs">
+      <a-typography-text type="secondary">
+        <img :src="tomeIcon" alt="" class="mr-1 inline size-4 align-text-bottom" />{{ stock.tomes.toLocaleString() }} /
+        {{ MAX_TOMES_HELD.toLocaleString() }} held · kept in this browser
+      </a-typography-text>
+      <plugin-mark field="tomes" :value="stock.tomes" />
+    </span>
   </div>
 </template>
 
@@ -46,6 +52,7 @@ import type { WeeklyActivity } from '@/constants/weeklyActivities'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useStockStore } from '@/stores/stockStore'
 import { useWeeklyStore } from '@/stores/weeklyStore'
+import PluginMark from '@/views/PluginMark.vue'
 
 const props = defineProps<{ activity: WeeklyActivity }>()
 

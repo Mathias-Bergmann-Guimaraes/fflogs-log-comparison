@@ -63,6 +63,7 @@
               </a-tooltip>
               <img :src="card.icon ?? card.activities[0]!.icon" alt="" class="block size-7 shrink-0 rounded" />
               <span class="truncate">{{ card.title ?? card.activities[0]!.name }}</span>
+              <plugin-mark v-if="!card.title" :field="`weekly.${card.activities[0]!.id}`" :value="weekly.doneCount(card.activities[0]!.id)" />
             </span>
           </template>
           <!-- A card of its own: its favorite and hide buttons sit in the header -->
@@ -81,7 +82,10 @@
               :class="weekly.isHidden(activity.id) && 'opacity-50'"
             >
               <div v-if="card.title" class="flex items-center justify-between gap-2">
-                <span class="truncate font-medium" :class="weekly.isDone(activity) && 'text-gray-500 line-through'">{{ activity.name }}</span>
+                <span class="flex min-w-0 items-center gap-1.5">
+                  <span class="truncate font-medium" :class="weekly.isDone(activity) && 'text-gray-500 line-through'">{{ activity.name }}</span>
+                  <plugin-mark :field="`weekly.${activity.id}`" :value="weekly.doneCount(activity.id)" />
+                </span>
                 <span class="flex shrink-0 items-center">
                   <favorite-button :activity="activity" />
                   <hide-button :activity="activity" />
@@ -118,6 +122,12 @@
                 </a-button>
               </div>
               <fashion-report v-if="activity.id === 'fashionReport'" />
+              <!-- Only the game plugin knows the journal's seals -->
+              <span v-if="activity.id === 'wondrousTails' && wondrousTails" class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                <span>{{ wondrousTails.stickers }} / 9 seals</span>
+                <a-typography-text type="secondary">{{ wondrousTails.secondChancePoints }} second chance points</a-typography-text>
+                <plugin-mark field="wondrousTails.stickers" />
+              </span>
             </div>
           </div>
         </a-card>
@@ -131,6 +141,7 @@ import { computed, ref } from 'vue'
 import type { CheckboxChangeEvent } from 'ant-design-vue/es/checkbox/interface'
 import { CheckCircleFilled, ExportOutlined, UndoOutlined } from '@ant-design/icons-vue'
 import { weeklyGroups, type WeeklyCard, type WeeklyGroup } from '@/constants/weeklyActivities'
+import { usePluginStore } from '@/stores/pluginStore'
 import { useWeeklyStore } from '@/stores/weeklyStore'
 import { formatDuration } from '@/views/hunts/dashboard/trains'
 import FashionReport from './FashionReport.vue'
@@ -138,6 +149,7 @@ import FauxHollows from './FauxHollows.vue'
 import FavoriteButton from './FavoriteButton.vue'
 import HideButton from './HideButton.vue'
 import MaskedCarnivale from './MaskedCarnivale.vue'
+import PluginMark from '@/views/PluginMark.vue'
 import TomestoneCap from './TomestoneCap.vue'
 import WeeklyParts from './WeeklyParts.vue'
 import WeeklyTiles from './WeeklyTiles.vue'
@@ -145,7 +157,10 @@ import WeeklyTiles from './WeeklyTiles.vue'
 const DONE_COLOR = '#49aa19'
 
 const weekly = useWeeklyStore()
+const plugin = usePluginStore()
 const showHidden = ref(false)
+
+const wondrousTails = computed(() => plugin.weekly?.data.wondrousTails)
 
 // Favorites come first, a card each, and leave their usual category.
 // Hidden activities stay out unless asked for; a card (and a category) with nothing left to show goes too

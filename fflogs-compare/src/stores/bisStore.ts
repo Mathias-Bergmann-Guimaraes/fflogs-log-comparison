@@ -4,7 +4,7 @@ import { message } from 'ant-design-vue'
 import { apiFetch } from '@/api/backend'
 import { EquipmentStatus, EquipmentType, isAccessory, type GearSource } from '@/types/EquipmentType'
 import { bisSlots } from '@/constants/bisSlots'
-import { WEAPON_SLOT } from '@/constants/gearSharing'
+import { WEAPON_SLOT, allJobs } from '@/constants/gearSharing'
 import { tomeCosts } from '@/constants/tomeCosts'
 import { floorOf, raidFloors, type RaidFloor, type RaidNeeds } from '@/constants/raidFloors'
 import { equipmentIcons, gearPiece, type GearPiece } from '@/constants/icons'
@@ -14,6 +14,7 @@ import { ultimateRaids } from '@/constants/ultimateWeapons'
 import { useAuthStore } from './authStore'
 import { useGearSetsStore } from './gearSetsStore'
 import { useItemCatalogStore, type CatalogItem } from './itemCatalogStore'
+import { usePluginStore } from './pluginStore'
 import { syncGearToWeapons } from './weaponSync'
 
 // Only slots the user has changed; anything missing is EquipmentStatus.RAID
@@ -26,6 +27,9 @@ type SavedItems = Record<string, Record<number, number>>
 type Links = Record<string, Record<number, number>>
 
 export type Materials = { tomes: number; twines: number; glazes: number; solvents: number }
+
+// The two ring slots' indexes
+const RING_SLOTS = bisSlots.flatMap((type, i) => (type === EquipmentType.RING ? [i] : []))
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
@@ -43,6 +47,7 @@ const defineBisStore = (setId: number) =>
     const base = setId ? `/gear-sets/${setId}/bis` : '/bis'
     const gearSets = useGearSetsStore()
     const catalog = useItemCatalogStore()
+    const plugin = usePluginStore()
     // The custom set's definition (jobs, item level range); undefined for the default set
     const definition = computed(() => (setId ? gearSets.byId(setId) : undefined))
 
@@ -114,6 +119,27 @@ const defineBisStore = (setId: number) =>
         return ultimateRaids.find((raid) => raid.name === ultimate?.name)?.weapons[job]
       }
       return catalog.autoPiece(job, set.minIlvl, set.maxIlvl, EquipmentType.WEAPON, source)?.id
+    }
+
+    // The item id of what the slot is after, or got, worked out like pieceOf (weaponItem for the weapon); undefined while unknown
+    function slotItem(job: string, slotIndex: number): number | undefined {
+      if (slotIndex === WEAPON_SLOT) return weaponItem(job)
+      const pinned = itemOf(job, slotIndex)
+      if (pinned) return pinned
+      const type = bisSlots[slotIndex]!
+      const set = definition.value
+      return set
+        ? catalog.autoPiece(job, set.minIlvl, set.maxIlvl, type, sourceOf(job, slotIndex))?.id
+        : gearItemIds[job]?.[type]?.[sourceOf(job, slotIndex)]
+    }
+
+    // When the game plugin last saw the character with the slot's item (pluginStore.owns); undefined if it hasn't.
+    // Both rings after the same ring can't both be had (raid and tome rings are unique), so only the first counts.
+    function ownedAt(job: string, slotIndex: number): number | undefined {
+      const item = slotItem(job, slotIndex)
+      if (item === undefined) return undefined
+      if (slotIndex === RING_SLOTS[1] && slotItem(job, RING_SLOTS[0]!) === item) return undefined
+      return plugin.owns(item)
     }
 
     // What the slot shows: its pinned item, else the piece its source points at (this tier's for the default set,
@@ -309,6 +335,37 @@ const defineBisStore = (setId: number) =>
       return (h.job === job && isLinked(job, h.other, slotIndex)) || (h.other === job && isLinked(job, h.job, slotIndex))
     }
 
+    // Slots whose item the game plugin saw the character with are marked Acquired (linked jobs follow), once per
+    // snapshot: one set back by hand stays that way until the plugin sends again
+    const acquiredFromPlugin = new Set<string>()
+    const toAcquire = computed(() => {
+      if (!loaded.value) return []
+      const pending: { job: string; slot: number; key: string }[] = []
+      for (const job of definition.value?.jobs ?? allJobs) {
+        bisSlots.forEach((_, slot) => {
+          if (statusOf(job, slot) === EquipmentStatus.ACQUIRED) return
+          const at = ownedAt(job, slot)
+          const key = `${at}:${job}:${slot}`
+          if (at !== undefined && !acquiredFromPlugin.has(key)) pending.push({ job, slot, key })
+        })
+      }
+      return pending
+    })
+    watch(toAcquire, async (pending) => {
+      const byJob = new Map<string, Record<number, EquipmentStatus>>()
+      for (const { job, slot, key } of pending) {
+        acquiredFromPlugin.add(key)
+        byJob.set(job, { ...byJob.get(job), [slot]: EquipmentStatus.ACQUIRED })
+      }
+      for (const [job, statuses] of byJob) {
+        try {
+          await setStatuses(job, statuses)
+        } catch (err) {
+          message.error(`Couldn't mark the game plugin's gear acquired: ${errorText(err)}`)
+        }
+      }
+    })
+
     // Don't leak one user's gear into the next account on the same tab
     const auth = useAuthStore()
     watch(
@@ -333,6 +390,8 @@ const defineBisStore = (setId: number) =>
       itemOf,
       hasUltimate,
       weaponItem,
+      slotItem,
+      ownedAt,
       pieceOf,
       itemOptions,
       linkedOnSlot,

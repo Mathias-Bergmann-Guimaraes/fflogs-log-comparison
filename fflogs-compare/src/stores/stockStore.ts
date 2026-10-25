@@ -18,6 +18,8 @@ export type Stock = {
   coffers: Record<EquipmentType, number>
   // The reset the "this week" fields belong to; past it, they're cleared
   weekResetsAt: number
+  // When the game plugin's snapshots last copied in here were read, per kind (pluginStore)
+  pluginCapturedAt?: { inventory?: number; weekly?: number }
 }
 
 const STORAGE_KEY = 'bis-stock'

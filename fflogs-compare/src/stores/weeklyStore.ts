@@ -11,12 +11,19 @@ import { useAuthStore } from './authStore'
 //   progress: times each activity was done this week (1 for a plain checkbox; for one with parts, a bit per part done)
 //   hidden: activities the user doesn't do, left out of the list
 //   favorites: activities pinned to the Favorites category at the top, in the order they were added
-type WeeklyState = { resetsAt: number; progress: Record<string, number>; hidden: string[]; favorites: string[] }
+//   pluginCapturedAt: when the game plugin's weekly snapshot last copied into progress was read (pluginStore)
+type WeeklyState = { resetsAt: number; progress: Record<string, number>; hidden: string[]; favorites: string[]; pluginCapturedAt?: number }
 
 const byId = new Map(weeklyActivities.map((a) => [a.id, a]))
 const maxFor = (activity: WeeklyActivity) => (activity.parts ? (1 << activity.parts.length) - 1 : (activity.count ?? 1))
 // Out-of-range values are capped (or, for parts, the unknown bits dropped)
 const clampFor = (activity: WeeklyActivity, value: number) => (activity.parts ? value & maxFor(activity) : Math.min(value, maxFor(activity)))
+
+// The value progress would keep for an activity; undefined for an unknown one
+export function clampProgress(id: string, value: number): number | undefined {
+  const activity = byId.get(id)
+  return activity && clampFor(activity, Math.max(0, Math.round(value)))
+}
 
 const emptyState = (): WeeklyState => ({ resetsAt: nextWeeklyReset().getTime(), progress: {}, hidden: [], favorites: [] })
 
@@ -27,6 +34,7 @@ function normalize(saved: unknown): WeeklyState {
   const raw = saved as Record<string, unknown>
   if (Array.isArray(raw.hidden)) state.hidden = raw.hidden.filter((id): id is string => typeof id === 'string' && byId.has(id))
   if (Array.isArray(raw.favorites)) state.favorites = [...new Set(raw.favorites.filter((id): id is string => typeof id === 'string' && byId.has(id)))]
+  if (typeof raw.pluginCapturedAt === 'number') state.pluginCapturedAt = raw.pluginCapturedAt
   if (raw.resetsAt !== state.resetsAt || !raw.progress || typeof raw.progress !== 'object') return state
   for (const [id, value] of Object.entries(raw.progress as Record<string, unknown>)) {
     const activity = byId.get(id)
@@ -38,17 +46,21 @@ function normalize(saved: unknown): WeeklyState {
 export const useWeeklyStore = defineStore('weekly', () => {
   const state = ref<WeeklyState>(emptyState())
 
-  // On login (and account switch): an empty week, then this user's checklist
+  // On login (and account switch): an empty week, then this user's checklist.
+  // loaded: this user's checklist is in, so the plugin's progress can go on top of it
   const auth = useAuthStore()
+  const loaded = ref(false)
   watch(
     () => auth.user?.id,
     async (userId) => {
       state.value = emptyState()
+      loaded.value = false
       if (userId === undefined) return
       try {
         const { value } = await apiFetch<{ value: unknown }>('/settings/weekly')
         if (auth.user?.id !== userId) return // switched account meanwhile
         state.value = normalize(value)
+        loaded.value = true
       } catch (err) {
         console.error("Couldn't load the weekly checklist", err)
       }
@@ -106,6 +118,17 @@ export const useWeeklyStore = defineStore('weekly', () => {
     void save({ ...state.value, resetsAt: resetsAt.value, progress })
   }
 
+  // The game plugin's progress for the activities it knows replaces what's there (0 unticks), in one save
+  function applyPlugin(progress: Record<string, number>, capturedAt: number) {
+    const next = { ...state.value.progress }
+    for (const [id, count] of Object.entries(progress)) {
+      const value = clampProgress(id, count)
+      if (value) next[id] = value
+      else if (value === 0) delete next[id]
+    }
+    void save({ ...state.value, resetsAt: resetsAt.value, progress: next, pluginCapturedAt: capturedAt })
+  }
+
   function setHidden(id: string, hidden: boolean) {
     const rest = state.value.hidden.filter((h) => h !== id)
     void save({ ...state.value, hidden: hidden ? [...rest, id] : rest })
@@ -128,6 +151,8 @@ export const useWeeklyStore = defineStore('weekly', () => {
   })
 
   return {
+    loaded,
+    pluginCapturedAt: computed(() => state.value.pluginCapturedAt),
     now,
     resetsAt,
     doneCount,
@@ -142,6 +167,7 @@ export const useWeeklyStore = defineStore('weekly', () => {
     setHidden,
     setFavorite,
     resetWeek,
+    applyPlugin,
     summary,
     hiddenCount: computed(() => state.value.hidden.length),
     favorites: computed(() => state.value.favorites.map((id) => byId.get(id)!)),

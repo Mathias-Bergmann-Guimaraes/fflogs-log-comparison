@@ -80,13 +80,16 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { Empty, message, type TableColumnType } from 'ant-design-vue'
+import { storeToRefs } from 'pinia'
 import { apiFetch } from '@/api/backend'
+import { usePluginStore } from '@/stores/pluginStore'
 import type { NewPluginToken, PluginData, PluginSnapshotKind, PluginToken } from '@/types/plugin'
 
 const ingestUrl = `${location.origin}/api/plugin/ingest`
 
 const tokens = ref<PluginToken[]>([])
-const data = ref<PluginData | null>(null)
+// Shared with pluginStore, so deleting the data here takes the plugin's marks off the other pages too
+const { data } = storeToRefs(usePluginStore())
 const loading = ref(false)
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err))

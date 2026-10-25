@@ -31,7 +31,10 @@
                 class="w-full! [&_input]:text-center! [&_input]:px-0!"
                 aria-label="Tomestones held"
               />
-              <a-typography-text type="secondary" class="text-[11px] leading-none">held</a-typography-text>
+              <div class="flex items-center justify-center gap-0.5 text-[11px] leading-none">
+                <a-typography-text type="secondary">held</a-typography-text>
+                <plugin-mark field="tomes" :value="stock.tomes" />
+              </div>
             </div>
             <a-tooltip title="Tomestones held">
               <img :src="tomeIcon" alt="" class="size-10 rounded-md bg-gray-800 p-1" />
@@ -59,7 +62,10 @@
                 class="w-full! [&_input]:text-center! [&_input]:px-0!"
                 aria-label="Tomestones earned this week"
               />
-              <a-typography-text type="secondary" class="text-[11px] leading-none">/ {{ settings.weeklyTomeCap }}</a-typography-text>
+              <div class="flex items-center justify-center gap-0.5 text-[11px] leading-none">
+                <a-typography-text type="secondary">/ {{ settings.weeklyTomeCap }}</a-typography-text>
+                <plugin-mark field="tomesEarnedThisWeek" :value="stock.tomesEarnedThisWeek" />
+              </div>
             </div>
           </div>
         </div>
@@ -82,6 +88,7 @@
             :key="f.floor"
             v-model="stock.books[f.floor]"
             :label="`${f.label} book`"
+            :plugin-field="`books.${f.floor}`"
             :class="bookLayout[f.floor].row"
           >
             <a-tooltip :title="clearedHint(f.floor)">
@@ -106,12 +113,22 @@
           </stock-counter>
 
           <!-- Placed explicitly from 30rem: under Floor 3 (twine) and Floor 2 (glaze) -->
-          <stock-counter v-model="stock.twines" label="twine" class="flex-row-reverse @[30rem]:col-start-3 @[30rem]:row-start-2 @[30rem]:flex-row">
+          <stock-counter
+            v-model="stock.twines"
+            label="twine"
+            plugin-field="twines"
+            class="flex-row-reverse @[30rem]:col-start-3 @[30rem]:row-start-2 @[30rem]:flex-row"
+          >
             <a-tooltip title="Twines (drop from Floor 3)">
               <img :src="twineIcon" alt="Twines" class="size-10 rounded-md bg-gray-800 p-1" />
             </a-tooltip>
           </stock-counter>
-          <stock-counter v-model="stock.glazes" label="glaze" class="@[30rem]:col-start-2 @[30rem]:row-start-2 @[30rem]:flex-row-reverse">
+          <stock-counter
+            v-model="stock.glazes"
+            label="glaze"
+            plugin-field="glazes"
+            class="@[30rem]:col-start-2 @[30rem]:row-start-2 @[30rem]:flex-row-reverse"
+          >
             <a-tooltip title="Glazes (drop from Floor 2)">
               <img :src="glazeIcon" alt="Glazes" class="size-10 rounded-md bg-gray-800 p-1" />
             </a-tooltip>
@@ -142,6 +159,7 @@
             :key="c.type"
             v-model="stock.coffers[c.type]"
             :label="`${c.label} coffer`"
+            :plugin-field="`coffers.${c.type}`"
             :reverse="!isAccessory(c.type)"
           >
             <coffer-menu :type="c.type" @given="(message, undo) => showUndo(`coffer-${c.type}`, message, undo)">
@@ -183,6 +201,7 @@ import FloorBook from '../FloorBook.vue'
 import CofferMenu from './CofferMenu.vue'
 import StockCounter from './StockCounter.vue'
 import CheckIcon from '../CheckIcon.vue'
+import PluginMark from '@/views/PluginMark.vue'
 
 const stockStore = useStockStore()
 const { stock } = storeToRefs(stockStore)

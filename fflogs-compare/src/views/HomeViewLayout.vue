@@ -84,6 +84,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useProfileStore } from '@/stores/profileStore'
 import ProfileModal from './ProfileModal.vue'
 import { useHuntTrainsStore } from '@/stores/huntTrainsStore'
+import { usePluginStore } from '@/stores/pluginStore'
 import HuntAlertsBell from './hunts/HuntAlertsBell.vue'
 
 const router = useRouter()
@@ -157,6 +158,9 @@ const menuOpenKeys = computed({
 watch(collapsed, () => (popupOpenKeys.value = []))
 
 auth.ensureLoaded()
+
+// Started here, not by the pages that show its data, so whatever the game plugin sent reaches the stock and weekly checklist
+usePluginStore()
 
 // Hunt trains are polled while someone with the Hunt Tracker is signed in, for the bell in the header
 const huntTrains = useHuntTrainsStore()

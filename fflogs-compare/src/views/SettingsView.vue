@@ -12,6 +12,18 @@
         </a-form>
       </a-card>
 
+      <a-card size="small" title="Game plugin marks">
+        <a-form layout="vertical">
+          <a-form-item
+            label="Show what the plugin can track"
+            help="Values the game plugin filled in always get a cyan plug. With this on, everything else it could fill in gets a gray one."
+            class="mb-0!"
+          >
+            <a-switch v-model:checked="draft.showPluginTrackable" />
+          </a-form-item>
+        </a-form>
+      </a-card>
+
       <a-card v-if="auth.hasFeature('hunts')" size="small" title="Hunt Tracker">
         <a-form layout="vertical">
           <div class="grid grid-cols-1 gap-x-6 sm:grid-cols-2">

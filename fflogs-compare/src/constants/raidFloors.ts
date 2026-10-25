@@ -9,19 +9,24 @@ export type RaidFloor = 1 | 2 | 3 | 4
 
 // bookCost: books that floor's vendor wants per item
 // upgrade: the tome-gear upgrade material that floor drops (glaze for accessories, twine for armour)
+// bookItemId: the book's item id (AAC Illustrated: HW Edition I-IV), for the game plugin's inventory
 export const raidFloors: {
   floor: RaidFloor
   label: string
   slots: readonly number[]
   icon: string
   bookCost: number
+  bookItemId: number
   upgrade?: 'twine' | 'glaze'
 }[] = [
-  { floor: 1, label: 'Floor 1', slots: [5, 6, 7, 8, 9], icon: tier1Book, bookCost: 3 }, // Earrings, Necklace, Bracelets, Rings
-  { floor: 2, label: 'Floor 2', slots: [0, 2, 4], icon: tier2Book, bookCost: 4, upgrade: 'glaze' }, // Head, Hands, Feet
-  { floor: 3, label: 'Floor 3', slots: [1, 3], icon: tier3Book, bookCost: 6, upgrade: 'twine' }, // Body, Legs
-  { floor: 4, label: 'Floor 4', slots: [10], icon: tier4Book, bookCost: 8 }, // Weapon
+  { floor: 1, label: 'Floor 1', slots: [5, 6, 7, 8, 9], icon: tier1Book, bookCost: 3, bookItemId: 49760 }, // Earrings, Necklace, Bracelets, Rings
+  { floor: 2, label: 'Floor 2', slots: [0, 2, 4], icon: tier2Book, bookCost: 4, bookItemId: 49761, upgrade: 'glaze' }, // Head, Hands, Feet
+  { floor: 3, label: 'Floor 3', slots: [1, 3], icon: tier3Book, bookCost: 6, bookItemId: 49762, upgrade: 'twine' }, // Body, Legs
+  { floor: 4, label: 'Floor 4', slots: [10], icon: tier4Book, bookCost: 8, bookItemId: 49763 }, // Weapon
 ]
+
+// Item ids of the upgrade materials (Thundersteeped Twine and Thundersteeping Glaze), for the game plugin's inventory
+export const upgradeItemIds = { twine: 49758, glaze: 49759 } as const
 
 export function floorOf(slot: number): RaidFloor | undefined {
   return raidFloors.find((f) => f.slots.includes(slot))?.floor

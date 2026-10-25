@@ -58,6 +58,8 @@
         :ultimate="bis.hasUltimate(job)"
         :item-options="bis.itemOptions(job, WEAPON_SLOT)"
         :item-id="bis.itemOf(job, WEAPON_SLOT)"
+        :owned-at="bis.ownedAt(job, WEAPON_SLOT)"
+        :trackable="bis.slotItem(job, WEAPON_SLOT) !== undefined"
         @update:status="bis.setStatus(job, WEAPON_SLOT, $event)"
         @update:item="bis.setItem(job, WEAPON_SLOT, $event)"
       />
@@ -75,6 +77,8 @@
           :highlighted="bis.isHighlighted(job, i)"
           :item-options="bis.itemOptions(job, i)"
           :item-id="bis.itemOf(job, i)"
+          :owned-at="bis.ownedAt(job, i)"
+          :trackable="bis.slotItem(job, i) !== undefined"
           @update:status="bis.setStatus(job, i, $event)"
           @update:item="bis.setItem(job, i, $event)"
         />

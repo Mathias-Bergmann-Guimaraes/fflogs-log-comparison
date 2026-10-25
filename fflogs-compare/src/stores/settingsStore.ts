@@ -14,6 +14,7 @@ import { useAuthStore } from './authStore'
 //   trainRunningMinutes: how long a train counts as running after its start; trainUntimedMinutes when the post gave no time
 //   trainMarks: how many A ranks a train is assumed to do when its post doesn't say
 //   *ByExpansion / *ByType: the advanced per-expansion overrides; a missing entry uses the value above
+//   showPluginTrackable: also show the game plugin's mark, grayed out, on values it could fill in but hasn't (PluginMark)
 export type RespawnOverride = { min?: number; max?: number }
 
 export type Preferences = {
@@ -29,6 +30,7 @@ export type Preferences = {
   ssRankUpByExpansion: Partial<Record<ExpansionKey, number>>
   respawnByType: Partial<Record<TrainTypeKey, RespawnOverride>>
   trainMarksByType: Partial<Record<TrainTypeKey, number>>
+  showPluginTrackable: boolean
 }
 
 export const TOME_CAPS = [450, 900] as const
@@ -47,6 +49,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   ssRankUpByExpansion: {},
   respawnByType: {},
   trainMarksByType: {},
+  showPluginTrackable: false,
 }
 
 // What each number may be, for the page's inputs and for checking what's read back
@@ -99,6 +102,7 @@ export function normalize(saved: unknown): Preferences {
       }),
     ),
     trainMarksByType: overrides(TRAIN_TYPE_KEYS, raw.trainMarksByType, LIMITS.trainMarks),
+    showPluginTrackable: raw.showPluginTrackable === true,
   }
 }
 
@@ -127,6 +131,7 @@ export const useSettingsStore = defineStore('settings', () => {
   )
 
   const weeklyTomeCap = computed(() => preferences.value.weeklyTomeCap)
+  const showPluginTrackable = computed(() => preferences.value.showPluginTrackable)
 
   // An unknown expansion gets the general value
   function sRankUpMs(sRank: { ss: boolean; expansion: ExpansionKey | null }) {
@@ -164,5 +169,5 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  return { preferences, weeklyTomeCap, sRankUpMs, respawnWindowMs, trainRunningMs, trainMarks, save }
+  return { preferences, weeklyTomeCap, showPluginTrackable, sRankUpMs, respawnWindowMs, trainRunningMs, trainMarks, save }
 })
