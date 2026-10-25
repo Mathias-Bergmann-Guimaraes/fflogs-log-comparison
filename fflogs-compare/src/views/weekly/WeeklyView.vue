@@ -33,20 +33,35 @@
       </div>
     </a-card>
 
-    <!-- A heading per category, then a card per activity (or per few similar ones) -->
-    <section v-for="group in groups" :key="group.key" class="mb-6">
+    <!-- A heading per category, then a card per activity (or per few similar ones).
+         Masonry: CSS columns, each card as tall as its content and never split, so there's no blank space under any -->
+    <section v-for="group in groups" :key="group.key" class="mb-2">
       <a-typography-title :level="5" class="mb-3!">{{ group.title }}</a-typography-title>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <div class="columns-1 gap-4 sm:columns-2 xl:columns-3 2xl:columns-4">
         <a-card
           v-for="card in group.cards"
           :key="card.key"
           size="small"
-          class="h-full"
+          class="mb-4! break-inside-avoid"
           :style="cardDone(card) ? { borderColor: DONE_COLOR } : undefined"
         >
           <template #title>
             <span class="flex min-w-0 items-center gap-2">
-              <check-circle-filled :style="{ color: cardDone(card) ? DONE_COLOR : '#555' }" />
+              <!-- Ticks everything on the card (or clears it all if it's already done) -->
+              <a-tooltip :title="cardDone(card) ? 'Mark not done' : 'Mark all done'">
+                <a-button
+                  size="small"
+                  type="text"
+                  class="shrink-0 hover:bg-transparent! active:bg-transparent!"
+                  :aria-label="`${cardDone(card) ? 'Mark not done' : 'Mark done'}: ${card.title ?? card.activities[0]!.name}`"
+                  @click="toggleCard(card)"
+                >
+                  <template #icon>
+                    <check-circle-filled :style="{ color: cardDone(card) ? DONE_COLOR : '#555' }" />
+                  </template>
+                </a-button>
+              </a-tooltip>
+              <img :src="card.icon ?? card.activities[0]!.icon" alt="" class="block size-7 shrink-0 rounded" />
               <span class="truncate">{{ card.title ?? card.activities[0]!.name }}</span>
             </span>
           </template>
@@ -73,7 +88,12 @@
                 </span>
               </div>
               <a-typography-text type="secondary" class="text-xs">{{ activity.description }}</a-typography-text>
-              <div class="flex flex-wrap items-center gap-2">
+              <tomestone-cap v-if="activity.id === 'tomestones'" :activity="activity" />
+              <masked-carnivale v-else-if="activity.id === 'carnivale'" :activity="activity" />
+              <faux-hollows v-else-if="activity.id === 'fauxHollows'" :activity="activity" />
+              <weekly-tiles v-else-if="activity.parts && activity.tiles" :activity="activity" />
+              <weekly-parts v-else-if="activity.parts" :activity="activity" />
+              <div v-else class="flex flex-wrap items-center gap-2">
                 <a-input-number
                   v-if="activity.count"
                   size="small"
@@ -114,8 +134,13 @@ import { weeklyGroups, type WeeklyCard, type WeeklyGroup } from '@/constants/wee
 import { useWeeklyStore } from '@/stores/weeklyStore'
 import { formatDuration } from '@/views/hunts/dashboard/trains'
 import FashionReport from './FashionReport.vue'
+import FauxHollows from './FauxHollows.vue'
 import FavoriteButton from './FavoriteButton.vue'
 import HideButton from './HideButton.vue'
+import MaskedCarnivale from './MaskedCarnivale.vue'
+import TomestoneCap from './TomestoneCap.vue'
+import WeeklyParts from './WeeklyParts.vue'
+import WeeklyTiles from './WeeklyTiles.vue'
 
 const DONE_COLOR = '#49aa19'
 
@@ -146,8 +171,14 @@ const groups = computed(() => {
 
 // Done once everything on it that isn't hidden is done
 function cardDone(card: WeeklyCard) {
-  const shown = card.activities.filter((a) => !weekly.isHidden(a.id))
+  const shown = shownActivities(card)
   return shown.length > 0 && shown.every(weekly.isDone)
+}
+
+const shownActivities = (card: WeeklyCard) => card.activities.filter((a) => !weekly.isHidden(a.id))
+
+function toggleCard(card: WeeklyCard) {
+  weekly.setAllDone(shownActivities(card), !cardDone(card))
 }
 
 const resetLabel = computed(() => new Intl.DateTimeFormat(undefined, { weekday: 'long', hour: '2-digit', minute: '2-digit' }).format(weekly.resetsAt))

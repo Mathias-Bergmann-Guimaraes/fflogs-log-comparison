@@ -8,13 +8,15 @@ import { useAuthStore } from './authStore'
 
 // This week's weekly checklist, saved per account.
 //   resetsAt: the reset the progress belongs to; past it, the progress is thrown away
-//   progress: times each activity was done this week (1 for a plain checkbox)
+//   progress: times each activity was done this week (1 for a plain checkbox; for one with parts, a bit per part done)
 //   hidden: activities the user doesn't do, left out of the list
 //   favorites: activities pinned to the Favorites category at the top, in the order they were added
 type WeeklyState = { resetsAt: number; progress: Record<string, number>; hidden: string[]; favorites: string[] }
 
 const byId = new Map(weeklyActivities.map((a) => [a.id, a]))
-const maxFor = (activity: WeeklyActivity) => activity.count ?? 1
+const maxFor = (activity: WeeklyActivity) => (activity.parts ? (1 << activity.parts.length) - 1 : (activity.count ?? 1))
+// Out-of-range values are capped (or, for parts, the unknown bits dropped)
+const clampFor = (activity: WeeklyActivity, value: number) => (activity.parts ? value & maxFor(activity) : Math.min(value, maxFor(activity)))
 
 const emptyState = (): WeeklyState => ({ resetsAt: nextWeeklyReset().getTime(), progress: {}, hidden: [], favorites: [] })
 
@@ -28,7 +30,7 @@ function normalize(saved: unknown): WeeklyState {
   if (raw.resetsAt !== state.resetsAt || !raw.progress || typeof raw.progress !== 'object') return state
   for (const [id, value] of Object.entries(raw.progress as Record<string, unknown>)) {
     const activity = byId.get(id)
-    if (activity && typeof value === 'number' && Number.isInteger(value) && value > 0) state.progress[id] = Math.min(value, maxFor(activity))
+    if (activity && typeof value === 'number' && Number.isInteger(value) && value > 0) state.progress[id] = clampFor(activity, value)
   }
   return state
 }
@@ -79,9 +81,28 @@ export const useWeeklyStore = defineStore('weekly', () => {
 
   function setDone(activity: WeeklyActivity, count: number) {
     const progress = { ...state.value.progress }
-    const value = Math.min(Math.max(0, Math.round(count)), maxFor(activity))
+    const value = clampFor(activity, Math.max(0, Math.round(count)))
     if (value) progress[activity.id] = value
     else delete progress[activity.id]
+    void save({ ...state.value, resetsAt: resetsAt.value, progress })
+  }
+
+  // Parts are bits of the progress
+  const isPartDone = (activity: WeeklyActivity, index: number) => (doneCount(activity.id) & (1 << index)) !== 0
+  const partsDone = (activity: WeeklyActivity) => activity.parts?.filter((_, i) => isPartDone(activity, i)).length ?? 0
+  // A cumulative activity's parts are done up to a point: ticking one ticks those before it, unticking one unticks those after
+  function togglePart(activity: WeeklyActivity, index: number) {
+    if (!activity.cumulative) return setDone(activity, doneCount(activity.id) ^ (1 << index))
+    setDone(activity, (1 << (isPartDone(activity, index) ? index : index + 1)) - 1)
+  }
+
+  // Ticks several activities all the way (or clears them) in one save, e.g. a whole card
+  function setAllDone(activities: WeeklyActivity[], done: boolean) {
+    const progress = { ...state.value.progress }
+    for (const activity of activities) {
+      if (done) progress[activity.id] = maxFor(activity)
+      else delete progress[activity.id]
+    }
     void save({ ...state.value, resetsAt: resetsAt.value, progress })
   }
 
@@ -114,6 +135,10 @@ export const useWeeklyStore = defineStore('weekly', () => {
     isHidden,
     isFavorite,
     setDone,
+    isPartDone,
+    partsDone,
+    togglePart,
+    setAllDone,
     setHidden,
     setFavorite,
     resetWeek,

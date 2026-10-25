@@ -1,5 +1,8 @@
 import { EquipmentType } from '@/types/EquipmentType'
 
+// The most of the current tomestone you can hold at once
+export const MAX_TOMES_HELD = 2000
+
 // Allagan Tomestones for each tome piece
 export const tomeCosts: Record<EquipmentType, number> = {
   [EquipmentType.HEAD]: 495,

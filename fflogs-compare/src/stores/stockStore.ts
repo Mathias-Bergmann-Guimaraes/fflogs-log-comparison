@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import type { RaidFloor } from '@/constants/raidFloors'
+import { nextWeeklyReset } from '@/composables/useBisPlan'
+import { MAX_TOMES_HELD } from '@/constants/tomeCosts'
 import { EquipmentType } from '@/types/EquipmentType'
 
 // What the player already holds, for the dashboard's week estimates.
@@ -14,6 +16,8 @@ export type Stock = {
   glazes: number
   // Unopened coffers per slot type
   coffers: Record<EquipmentType, number>
+  // The reset the "this week" fields belong to; past it, they're cleared
+  weekResetsAt: number
 }
 
 const STORAGE_KEY = 'bis-stock'
@@ -26,6 +30,7 @@ const emptyStock = (): Stock => ({
   twines: 0,
   glazes: 0,
   coffers: emptyCoffers(),
+  weekResetsAt: nextWeeklyReset().getTime(),
 })
 
 const emptyCoffers = () =>
@@ -39,7 +44,13 @@ function loadStock(): Stock {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')
     // Coffers merge too, so a save from before they (or a slot) existed still loads
-    if (saved && typeof saved === 'object') return { ...emptyStock(), ...saved, coffers: { ...emptyCoffers(), ...saved.coffers } }
+    // A save from before weekResetsAt existed counts as this week's
+    if (saved && typeof saved === 'object') {
+      const stock: Stock = { ...emptyStock(), ...saved, coffers: { ...emptyCoffers(), ...saved.coffers } }
+      // Older saves allowed more than can be held
+      stock.tomes = Math.min(stock.tomes, MAX_TOMES_HELD)
+      return stock
+    }
   } catch {
     // Storage blocked or corrupt: start empty
   }
@@ -48,6 +59,17 @@ function loadStock(): Stock {
 
 export const useStockStore = defineStore('stock', () => {
   const stock = ref<Stock>(loadStock())
+
+  // At the weekly reset the week's tomestones and floor clears start over (books and the rest stay);
+  // checked on load and every minute after
+  function clearPastWeek() {
+    const resetsAt = nextWeeklyReset().getTime()
+    if (stock.value.weekResetsAt === resetsAt) return
+    const empty = emptyStock()
+    Object.assign(stock.value, { tomesEarnedThisWeek: 0, floorsClearedThisWeek: empty.floorsClearedThisWeek, weekResetsAt: resetsAt })
+  }
+  clearPastWeek()
+  setInterval(clearPastWeek, 60_000)
 
   watch(
     stock,

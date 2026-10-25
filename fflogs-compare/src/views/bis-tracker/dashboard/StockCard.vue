@@ -24,7 +24,7 @@
               <a-input-number
                 v-model:value="stock.tomes"
                 :min="0"
-                :max="9999"
+                :max="MAX_TOMES_HELD"
                 :precision="0"
                 :controls="false"
                 size="small"
@@ -175,6 +175,7 @@ import { EquipmentStatus, isAccessory } from '@/types/EquipmentType'
 import { equipmentStatusIcons } from '@/constants/icons'
 import { raidFloors, type RaidFloor } from '@/constants/raidFloors'
 import { cofferDefs } from '@/constants/coffers'
+import { MAX_TOMES_HELD } from '@/constants/tomeCosts'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useStockStore } from '@/stores/stockStore'
 import { useLootStore } from '@/stores/lootStore'
