@@ -139,6 +139,26 @@ Vite proxies `/api` to it.
   `Dawntrail`, `EW`, `ShB`, …; see `TRAIN_TYPES` in
   [`trains.ts`](fflogs-compare/src/views/hunts/dashboard/trains.ts)) for the dashboard to tell them apart.
 
+- **Fashion Report guide (optional)**: the *Weekly* page's Fashion Report card shows whether judging
+  is open (Friday 08:00 UTC to the Tuesday 08:00 UTC reset) and when it next opens. Under that, it
+  shows this week's guide image (Kaiyoko's), stored by
+  [`server/fashion.ts`](fflogs-compare/server/fashion.ts). The guide is the image of an imgur link
+  posted in a Discord channel. Only the newest one is kept, and deleting the Discord message doesn't
+  remove it, so it stays up for the whole window. If none was posted since the last reset, the card
+  shows no image at all. The image arrives the same two ways as the hunts:
+
+  **Push.** With `HUNT_INGEST_SECRET` set, the bot sends each `MESSAGE_CREATE` and `MESSAGE_UPDATE`
+  of that channel to `POST /api/fashion/ingest`, one message per request, with the same header as
+  above. Partial updates are fine: the one where Discord adds the link's embed has no `author`.
+  The server answers:
+
+  - 204: stored, or the message is older than the stored one
+  - 422: the message has no imgur image (text, albums, other links); it's ignored
+  - 502: the image couldn't be downloaded
+
+  **Poll.** Set `DISCORD_BOT_TOKEN` and `DISCORD_FASHION_CHANNEL_ID`. Every 15 minutes, the server
+  takes the newest message in that channel that has an imgur image.
+
 > [!IMPORTANT]
 > The generated file `src/api/__generated__/graphql.ts` is gitignored, and nothing type-checks or
 > builds without it. `npm run dev` and `npm run build` regenerate it automatically (`predev` /
