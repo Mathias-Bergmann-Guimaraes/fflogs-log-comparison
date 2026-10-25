@@ -49,10 +49,10 @@
   <a-card v-if="hasFFLogsCredentials && !ultimates.character" size="small" class="mb-3!" :body-style="{ padding: '18px 24px' }">
     <div class="flex flex-wrap items-center gap-x-5 gap-y-3">
       <a-typography-text strong>FF Logs clears</a-typography-text>
-      <a-typography-text type="secondary">Add your FF Logs character to your profile to count totems from your clears.</a-typography-text>
+      <a-typography-text type="secondary">Claim your character in your profile to count totems from your clears on FF Logs.</a-typography-text>
       <a-button type="primary" size="small" @click="profile.modalOpen = true">
         <template #icon><user-outlined /></template>
-        Add to profile
+        Claim a character
       </a-button>
     </div>
     <a-typography-text type="secondary" class="mt-3 block text-xs">

@@ -55,6 +55,14 @@
       <div v-for="c in data.characters" :key="c.contentId" class="flex flex-wrap items-center gap-2">
         <span class="font-semibold">{{ c.snapshots.character?.data.name ?? c.contentId }}</span>
         <a-typography-text v-if="c.snapshots.character" type="secondary">{{ c.snapshots.character.data.world }}</a-typography-text>
+        <template v-if="c.snapshots.character">
+          <a-tag v-if="characters.isClaimed(c.snapshots.character.data.name, c.snapshots.character.data.world)" color="success" class="me-0!">
+            <check-circle-outlined /> Verified
+          </a-tag>
+          <a-tooltip v-else title="Prove it's yours through the Lodestone, so no other account can send data for it">
+            <a-button size="small" type="link" class="px-0!" @click="profile.modalOpen = true">Claim</a-button>
+          </a-tooltip>
+        </template>
         <a-tooltip v-for="kind in kindsOf(c)" :key="kind.kind" :title="`Received ${formatDate(kind.receivedAt)}`">
           <a-tag class="me-0!">{{ kind.kind }}</a-tag>
         </a-tooltip>
@@ -81,8 +89,11 @@
 import { onMounted, ref } from 'vue'
 import { Empty, message, type TableColumnType } from 'ant-design-vue'
 import { storeToRefs } from 'pinia'
+import { CheckCircleOutlined } from '@ant-design/icons-vue'
 import { apiFetch } from '@/api/backend'
+import { useCharacterStore } from '@/stores/characterStore'
 import { usePluginStore } from '@/stores/pluginStore'
+import { useProfileStore } from '@/stores/profileStore'
 import type { NewPluginToken, PluginData, PluginSnapshotKind, PluginToken } from '@/types/plugin'
 
 const ingestUrl = `${location.origin}/api/plugin/ingest`
@@ -90,6 +101,8 @@ const ingestUrl = `${location.origin}/api/plugin/ingest`
 const tokens = ref<PluginToken[]>([])
 // Shared with pluginStore, so deleting the data here takes the plugin's marks off the other pages too
 const { data } = storeToRefs(usePluginStore())
+const characters = useCharacterStore()
+const profile = useProfileStore()
 const loading = ref(false)
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err))

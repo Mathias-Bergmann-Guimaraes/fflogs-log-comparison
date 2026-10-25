@@ -1,8 +1,8 @@
 # A character's kills of every ultimate, under each encounter id it has had (constants/ultimateWeapons.ts): one alias per id.
 # encounterRankings' totalKills counts kills on every job, from public logs only.
-query CharacterUltimateKills($id: Int, $name: String, $serverSlug: String, $serverRegion: String) {
+query CharacterUltimateKills($id: Int, $name: String, $serverSlug: String, $serverRegion: String, $lodestoneID: Int) {
   characterData {
-    character(id: $id, name: $name, serverSlug: $serverSlug, serverRegion: $serverRegion) {
+    character(id: $id, name: $name, serverSlug: $serverSlug, serverRegion: $serverRegion, lodestoneID: $lodestoneID) {
       name
       hidden
       e1039: encounterRankings(encounterID: 1039)

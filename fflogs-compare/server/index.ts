@@ -11,6 +11,7 @@ import { settings } from './settings.ts'
 import { hunts, startHuntSync } from './hunts.ts'
 import { fashion, startFashionSync } from './fashion.ts'
 import { plugin } from './plugin.ts'
+import { characters } from './characters.ts'
 import { userFeatures } from './features.ts'
 import { startAdminServer } from './admin.ts'
 
@@ -93,6 +94,7 @@ api.route('/settings', settings)
 api.route('/hunts', hunts)
 api.route('/fashion', fashion)
 api.route('/plugin', plugin)
+api.route('/characters', characters)
 
 // --- App ---
 

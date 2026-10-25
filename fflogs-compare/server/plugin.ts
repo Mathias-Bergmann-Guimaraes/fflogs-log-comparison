@@ -4,6 +4,7 @@ import { bodyLimit } from 'hono/body-limit'
 import { db, transaction } from './db.ts'
 import { type AuthEnv, requireAuth, sha256 } from './auth.ts'
 import { isObject } from './hunts.ts'
+import { claimOwner } from './characters.ts'
 import {
   type NewPluginToken,
   type PluginData,
@@ -295,7 +296,12 @@ plugin.post('/ingest', bodyLimit({ maxSize: 1024 * 1024 }), requireToken, async 
     if (err instanceof Invalid) return c.json({ error: err.message }, 400)
     throw err
   }
-  return c.json({ stored: store(c.get('user').id, ingest, now) })
+  const userId = c.get('user').id
+  // A character verified through the Lodestone (server/characters.ts) only takes data from its own account
+  const { name, world } = ingest.character
+  const owner = claimOwner(name, world)
+  if (owner !== undefined && owner !== userId) return c.json({ error: `${name} (${world}) is claimed by another account` }, 403)
+  return c.json({ stored: store(userId, ingest, now) })
 })
 
 // --- App side (session) ---

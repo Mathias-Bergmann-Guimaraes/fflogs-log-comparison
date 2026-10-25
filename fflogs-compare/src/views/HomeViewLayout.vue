@@ -7,8 +7,13 @@
         <hunt-alerts-bell v-if="watchingHunts" />
         <!-- The username opens a menu: the profile (a modal) and logging out -->
         <a-dropdown v-if="auth.user" placement="bottomRight" :trigger="['click']">
-          <a-button type="text" class="text-gray-300!">
-            <template #icon><user-outlined /></template>
+          <!-- Grows past the button's 32px to fit the portrait; the header is 64px high -->
+          <a-button type="text" class="inline-flex! h-auto! items-center py-1! text-gray-300!">
+            <!-- The claimed character's Lodestone portrait (characterStore), else the plain icon -->
+            <template #icon>
+              <a-avatar v-if="characters.avatar" :src="characters.avatar" :size="40" class="me-2!" />
+              <user-outlined v-else />
+            </template>
             {{ auth.user.username }}
             <down-outlined class="text-xs" />
           </a-button>
@@ -81,6 +86,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { DownOutlined, IdcardOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/stores/authStore'
+import { useCharacterStore } from '@/stores/characterStore'
 import { useProfileStore } from '@/stores/profileStore'
 import ProfileModal from './ProfileModal.vue'
 import { useHuntTrainsStore } from '@/stores/huntTrainsStore'
@@ -178,6 +184,7 @@ watch(
 )
 
 const profile = useProfileStore()
+const characters = useCharacterStore()
 
 function onUserMenuClick({ key }: { key: string | number }) {
   if (key === 'profile') profile.modalOpen = true

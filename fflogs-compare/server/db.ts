@@ -238,6 +238,42 @@ const migrations: string[] = [
   );
   CREATE INDEX plugin_events_user ON plugin_events (user_id, occurred_at DESC);
   `,
+  // 14: characters claimed through the Lodestone (server/characters.ts). A claim is verified by finding the account's
+  // code in the character's Lodestone profile text; a character belongs to one account at a time, so verifying it
+  // again from another account moves it there. name and world are as the Lodestone showed them at the last check.
+  // fflogs = 1 marks the account's FF Logs character (at most one per account), found on FF Logs by its Lodestone id.
+  // claim_codes holds the codes handed out and not used yet, one per account and character.
+  `
+  CREATE TABLE character_claims (
+    lodestone_id TEXT PRIMARY KEY,
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name         TEXT NOT NULL,
+    world        TEXT NOT NULL,
+    data_center  TEXT,
+    verified_at  INTEGER NOT NULL,
+    fflogs       INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX character_claims_user ON character_claims (user_id);
+  CREATE UNIQUE INDEX character_claims_fflogs ON character_claims (user_id) WHERE fflogs = 1;
+  CREATE INDEX character_claims_name ON character_claims (name COLLATE NOCASE, world COLLATE NOCASE);
+
+  CREATE TABLE claim_codes (
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    lodestone_id TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    world        TEXT NOT NULL,
+    data_center  TEXT,
+    code         TEXT NOT NULL,
+    created_at   INTEGER NOT NULL,
+    PRIMARY KEY (user_id, lodestone_id)
+  );
+  `,
+  // 15: the character's Lodestone portrait (its img2.finalfantasyxiv.com link), the site's avatar for its account.
+  // Null for claims made before this until they're refreshed from the Lodestone.
+  `
+  ALTER TABLE character_claims ADD COLUMN avatar TEXT;
+  ALTER TABLE claim_codes ADD COLUMN avatar TEXT;
+  `,
 ]
 
 // node:sqlite has no transaction helper; synchronous fn only, so nothing else can interleave
