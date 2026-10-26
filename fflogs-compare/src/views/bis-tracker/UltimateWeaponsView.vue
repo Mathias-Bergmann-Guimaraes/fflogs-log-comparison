@@ -183,25 +183,24 @@
       </a-space>
       <!-- Looks like a BiS card's slot: the job's weapon from that ultimate, green with a tick once it's had -->
       <template v-else-if="column.raid">
-        <a-tooltip v-if="column.raid.weapons[record.job]" :title="weaponHint(column.raid, record.job)" :mouse-enter-delay="0.4">
-          <button
-            type="button"
-            class="relative size-10 cursor-pointer rounded-md border-2 align-middle transition hover:brightness-125"
-            :class="ultimates.has(column.raid, record.job) ? doneClass : pendingClass"
-            :aria-pressed="ultimates.has(column.raid, record.job)"
-            :aria-label="`${jobDisplayName(record.job)} ${column.raid.short} weapon`"
-            @click="ultimates.toggle(column.raid, record.job)"
+        <button
+          v-if="column.raid.weapons[record.job]"
+          type="button"
+          class="relative size-10 cursor-pointer rounded-md border-2 align-middle transition hover:brightness-125"
+          :class="ultimates.has(column.raid, record.job) ? doneClass : pendingClass"
+          :aria-pressed="ultimates.has(column.raid, record.job)"
+          :aria-label="`${jobDisplayName(record.job)} ${column.raid.short} weapon`"
+          @click="ultimates.toggle(column.raid, record.job)"
+        >
+          <!-- The generic ultimate icon until XIVAPI has answered, or if it couldn't -->
+          <img :src="weaponOf(column.raid, record.job)?.icon ?? ultimateIcon" alt="" class="size-full rounded p-0.5" />
+          <span
+            v-if="ultimates.has(column.raid, record.job)"
+            class="absolute -right-1.5 -bottom-1.5 flex size-5 items-center justify-center rounded-full bg-gray-900 p-0.5"
           >
-            <!-- The generic ultimate icon until XIVAPI has answered, or if it couldn't -->
-            <img :src="weaponOf(column.raid, record.job)?.icon ?? ultimateIcon" alt="" class="size-full rounded p-0.5" />
-            <span
-              v-if="ultimates.has(column.raid, record.job)"
-              class="absolute -right-1.5 -bottom-1.5 flex size-5 items-center justify-center rounded-full bg-gray-900 p-0.5"
-            >
-              <check-icon class="size-full" />
-            </span>
-          </button>
-        </a-tooltip>
+            <check-icon class="size-full" />
+          </span>
+        </button>
         <a-tooltip v-else :title="`${jobDisplayName(record.job)} came after ${column.raid.short}: no weapon`">
           <a-typography-text type="secondary" class="inline-block size-10 leading-10">—</a-typography-text>
         </a-tooltip>
@@ -282,17 +281,6 @@ const totemIcon = (raid: UltimateRaid) => catalog.items[raid.totem.id]?.icon ?? 
 const weaponOf = (raid: UltimateRaid, job: string) => {
   const id = raid.weapons[job]
   return id === undefined ? undefined : catalog.items[id]
-}
-
-// The weapon's tooltip: its name, and what ticking or unticking it does with the ultimate's totems
-function weaponHint(raid: UltimateRaid, job: string) {
-  const name = weaponOf(raid, job)?.name ?? `${raid.short} weapon`
-  if (ultimates.has(raid, job)) {
-    const refund = ultimates.usedTotem(raid, job) ? ` (gives back 1 ${raid.totem.name})` : ''
-    return `${name}: had. Click to undo${refund}`
-  }
-  const use = ultimates.totemsHeld(raid) > 0 ? ` (uses 1 of your ${raid.totem.name}s)` : ''
-  return `${name}: click to mark had${use}`
 }
 
 function totemHint(raid: UltimateRaid) {

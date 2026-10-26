@@ -122,25 +122,25 @@
       </a-space>
       <!-- One slot per stage in the column (a joined stage sits next to the one it comes with), each clicked on its own -->
       <div v-else-if="column.stages" class="inline-flex gap-3 align-middle">
-        <a-tooltip v-for="stage in column.stages" :key="stage" :title="stageHint(record.job, record.done, stage)" :mouse-enter-delay="0.4">
-          <button
-            type="button"
-            class="relative size-10 cursor-pointer rounded-md border-2 transition hover:brightness-125"
-            :class="record.done > stage ? doneClass : pendingClass"
-            :aria-pressed="record.done > stage"
-            :aria-label="`${jobDisplayName(record.job)} ${active.stages[stage]}`"
-            @click="relics.toggleStage(active, record.job, stage)"
+        <button
+          v-for="stage in column.stages"
+          :key="stage"
+          type="button"
+          class="relative size-10 cursor-pointer rounded-md border-2 transition hover:brightness-125"
+          :class="record.done > stage ? doneClass : pendingClass"
+          :aria-pressed="record.done > stage"
+          :aria-label="`${jobDisplayName(record.job)} ${active.stages[stage]}`"
+          @click="relics.toggleStage(active, record.job, stage)"
+        >
+          <!-- The generic relic icon until XIVAPI has answered, or if it couldn't -->
+          <img :src="weaponOf(record.job, stage)?.icon ?? relicIcon" alt="" class="size-full rounded p-0.5" />
+          <span
+            v-if="record.done > stage"
+            class="absolute -right-1.5 -bottom-1.5 flex size-5 items-center justify-center rounded-full bg-gray-900 p-0.5"
           >
-            <!-- The generic relic icon until XIVAPI has answered, or if it couldn't -->
-            <img :src="weaponOf(record.job, stage)?.icon ?? relicIcon" alt="" class="size-full rounded p-0.5" />
-            <span
-              v-if="record.done > stage"
-              class="absolute -right-1.5 -bottom-1.5 flex size-5 items-center justify-center rounded-full bg-gray-900 p-0.5"
-            >
-              <check-icon class="size-full" />
-            </span>
-          </button>
-        </a-tooltip>
+            <check-icon class="size-full" />
+          </span>
+        </button>
       </div>
       <div v-else-if="column.key === 'progress'" class="flex items-center gap-2">
         <div class="w-24 shrink-0">
@@ -248,18 +248,6 @@ function stonesHint(via: StageItem, stage: number) {
   const held = relics.stonesHeld(active.value, stage)
   const weapons = Math.floor(held / via.perWeapon)
   return `${via.item} held: enough for ${weapons} weapon${weapons === 1 ? '' : 's'}. Each weapon takes ${via.perWeapon} (${via.each} ${active.value.costs?.[stage]?.currency} each); ticking one uses them up, unticking gives them back.`
-}
-
-// The stage cell's tooltip: the weapon, and what ticking or unticking it does with the stage's items
-function stageHint(job: string, done: number, stage: number) {
-  const name = weaponOf(job, stage)?.name ?? active.value.stages[stage]
-  const via = active.value.costs?.[stage]?.via
-  if (done > stage) {
-    const refund = via && relics.usedStones(active.value, job, stage) ? ` (gives back ${via.perWeapon} ${via.item})` : ''
-    return `${name}: done. Click to undo${refund}`
-  }
-  const use = via && relics.stonesHeld(active.value, stage) >= via.perWeapon ? ` (uses ${via.perWeapon} of your ${via.item})` : ''
-  return `${name}: click to mark done${use}`
 }
 
 // Per currency: what the stages not done yet cost (overall and per job, jobs with nothing left out) and what the done ones did.

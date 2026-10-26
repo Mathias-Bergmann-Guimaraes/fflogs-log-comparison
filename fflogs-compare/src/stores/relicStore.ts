@@ -97,9 +97,6 @@ export const useRelicStore = defineStore('relic', () => {
 
   const stonesHeld = (series: RelicSeries, stage: number) => state.value.stones[series.key]?.[stage] ?? 0
 
-  // Whether ticking this job's stage used up held items
-  const usedStones = (series: RelicSeries, job: string, stage: number) => state.value.consumed[series.key]?.[job]?.includes(stage) ?? false
-
   // Optimistic: apply the change to a copy and show it now; put the previous state back if the save fails.
   // Resolves to whether the save stuck.
   async function save(change: (next: RelicState) => void, what: string): Promise<boolean> {
@@ -182,5 +179,5 @@ export const useRelicStore = defineStore('relic', () => {
     }, 'stones')
   }
 
-  return { whenLoaded, stagesDone, isSeriesComplete, stonesHeld, usedStones, toggleStage, setStageForAll, setStonesHeld }
+  return { whenLoaded, stagesDone, isSeriesComplete, stonesHeld, toggleStage, setStageForAll, setStonesHeld }
 })

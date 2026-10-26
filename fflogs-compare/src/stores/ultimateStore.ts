@@ -145,9 +145,6 @@ export const useUltimateStore = defineStore('ultimate', () => {
 
   const totemsHeld = (raid: UltimateRaid) => state.value.totems[raid.key] ?? 0
 
-  // Whether ticking this job's weapon used up a held totem
-  const usedTotem = (raid: UltimateRaid, job: string) => state.value.consumed[raid.key]?.includes(job) ?? false
-
   // Optimistic: apply the change to a copy and show it now; put the previous state back if the save fails.
   // Resolves to whether the save stuck.
   async function save(change: (next: UltimateState) => void, what: string): Promise<boolean> {
@@ -285,7 +282,6 @@ export const useUltimateStore = defineStore('ultimate', () => {
     has,
     countFor,
     totemsHeld,
-    usedTotem,
     toggle,
     setAll,
     setTotemsHeld,
